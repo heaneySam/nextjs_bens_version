@@ -1,0 +1,47 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Introduction
+The purpose of the optional allauth.usersessions app is to keep track of (authenticated) user sessions, allowing users to view a list of all their active sessions, as well as offering a means to end these sessions.
+
+# Installation
+On top of the standard installation, add the following:
+
+INSTALLED_APPS = [
+    ...
+    'django.contrib.humanize',
+    'allauth.usersessions',
+    ...
+]
+
+MIDDLEWARE = [
+    ...
+    # Optional -- needed when: USERSESSIONS_TRACK_ACTIVITY = True
+    'allauth.usersessions.middleware.UserSessionsMiddleware',
+    ...
+]
+
+
+# Configuration
+Available settings:
+
+USERSESSIONS_ADAPTER (default: "allauth.usersessions.adapter.DefaultUserSessionsAdapter")
+Specifies the adapter class to use, allowing you to alter certain default behaviour.
+
+USERSESSIONS_TRACK_ACTIVITY (default: False)
+Whether or not user sessions are kept updated. User sessions are created at login time, but as the user continues to access the site the IP address might change. Enabling this setting makes sure that the session is kept track of, meaning, the IP address, user agent and last seen timestamp are all kept up to date. Requires allauth.usersessions.middleware.UserSessionsMiddleware to be installed.
+
+
+# Signals
+The following signal is emitted while handling user sessiond.
+
+allauth.usersessions.signals.session_client_changed(request, from_session, to_session)
+This signal is emitted when the IP or user agent changes during the lifetime of a user session. Note that it only fires when USERSESSIONS_TRACK_ACTIVITY is turned on.
+
+
+
+Adapter
+class allauth.usersessions.adapter.DefaultUserSessionsAdapter(request=None)
+The adapter class allows you to override various functionality of the allauth.usersessions app. To do so, point settings.USERSESSIONS_ADAPTER to your own class that derives from DefaultUserSessionsAdapter and override the behavior by altering the implementation of the methods according to your own needs.

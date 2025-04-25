@@ -1,3 +1,5 @@
+import LoginForm from '../components/LoginForm';
+
 export default async function Home() {
   // fetch() here runs on the Next.js server
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health/`, { cache: "no-store" });
@@ -9,7 +11,8 @@ export default async function Home() {
       <p className="absolute top-4 right-4 text-sm">Backend health: {status}</p>
 
       <main className="…">
-        {/* … your existing JSX … */}
+        {/* Add Magic-Link LoginForm */}
+        <LoginForm />
       </main>
 
       <footer className="…">
