@@ -1,0 +1,211 @@
+---
+description: Tailwind v4; CSS; Globals; PostCSS
+globs: 
+alwaysApply: false
+---
+# Get started with Tailwind CSS
+Tailwind CSS works by scanning all of your HTML files, JavaScript components, and any other templates for class names, generating the corresponding styles and then writing them to a static CSS file.  It's fast, flexible, and reliable — with zero-runtime. Installing Tailwind CSS as a PostCSS plugin is the most seamless way to integrate it with frameworks like Next.js.  
+
+## 01 Install Tailwind CSS
+Install tailwindcss, @tailwindcss/postcss, and postcss via npm.
+npm install tailwindcss @tailwindcss/postcss postcss
+
+
+
+## 02 Add Tailwind to your PostCSS configuration
+Add @tailwindcss/postcss to your postcss.config.mjs file, or wherever PostCSS is configured in your project.
+
+postcss.config.mjs
+export default {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  }
+}
+
+
+## 03 Import Tailwind CSS
+Add an @import to your CSS file that imports Tailwind CSS.
+
+@import "tailwindcss";
+
+
+
+## 04  Start your build process
+Run your build process with npm run dev or whatever command is configured in your package.json file.
+
+npm run dev
+
+
+## 05 Start using Tailwind in your HTML
+Make sure your compiled CSS is included in the <head> (your framework might handle this for you), then start using Tailwind’s utility classes to style your content.
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="/dist/styles.css" rel="stylesheet">
+</head>
+<body>
+  <h1 class="text-3xl font-bold underline">
+    Hello world!
+  </h1>
+</body>
+</html>
+
+
+# Important notes to remember in Tailwind v4
+## Removed @tailwind directives
+In v4 you import Tailwind using a regular CSS @import statement, not using the @tailwind directives you used in v3:
+
+So instead of : 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+We simply have:
+@import "tailwindcss";
+
+
+## Removed deprecated utilities
+Tailwind v4 has removed any utilities that were deprecated in v3 and have been undocumented for several years. Here's a list of what's been removed along with the modern alternative:
+
+Deprecated	Replacement
+bg-opacity-*	        Use opacity modifiers like bg-black/50
+text-opacity-*	        Use opacity modifiers like text-black/50
+border-opacity-*	    Use opacity modifiers like border-black/50
+divide-opacity-*	    Use opacity modifiers like divide-black/50
+ring-opacity-*	        Use opacity modifiers like ring-black/50
+placeholder-opacity-*	Use opacity modifiers like placeholder-black/50
+flex-shrink-*	        shrink-*
+flex-grow-*	            grow-*
+overflow-ellipsis	    text-ellipsis
+decoration-slice	    box-decoration-slice
+decoration-clone	    box-decoration-clone
+
+
+
+## Renamed Utilities
+Tailwind v4 has renamed the following utilities in v4 to make them more consistent and predictable:
+
+v3	                    v4
+shadow-sm	            shadow-xs
+shadow	                shadow-sm
+drop-shadow-sm	        drop-shadow-xs
+drop-shadow	            drop-shadow-sm
+blur-sm	                blur-xs
+blur	                blur-sm
+backdrop-blur-sm	    backdrop-blur-xs
+backdrop-blur	        backdrop-blur-sm
+rounded-sm	            rounded-xs
+rounded	                rounded-sm
+outline-none	        outline-hidden
+ring	                ring-3
+
+
+### Updated shadow, radius, and blur scales
+Tailwind v4 has renamed the default shadow, radius and blur scales to make sure every utility has a named value. The "bare" versions still work for backward compatibility, but the <utility>-sm utilities will look different unless updated to their respective <utility>-xs versions.
+
+To update the project for these changes, replace all the v3 utilities with their v4 versions:
+*examples*
+<input class="shadow-sm" />     REPLACE WITH : <input class="shadow-xs" />
+<input class="shadow" />        REPLACE WITH: <input class="shadow-sm" />
+
+
+## Space-between selector
+Tailwind v4 changed the selector used by the space-x-* and space-y-* utilities to address serious performance issues on large pages:
+
+/* Before */
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+/* Now */
+.space-y-4 > :not(:last-child) {
+  margin-bottom: 1rem;
+}
+You might see changes in your project if you were ever using these utilities with inline elements, or if you were adding other margins to child elements to tweak their spacing.
+
+If this change causes any issues in your project, we recommend migrating to a flex or grid layout and using gap instead:
+
+*example*
+instead of : 
+<div class="space-y-4 p-4">
+
+now use:
+<div class="flex flex-col gap-4 p-4">
+  <label for="name">Name</label>
+  <input type="text" name="name" />
+</div>
+
+# Dark Mode in Tailwind v4
+
+Using variants to style your site in dark mode.
+
+## Overview
+Now that dark mode is a first-class feature of many operating systems, it's becoming more and more common to design a dark version of your website to go along with the default design.
+
+To make this as easy as possible, Tailwind includes a dark variant that lets you style your site differently when dark mode is enabled:
+*example*
+<div class="bg-white dark:bg-gray-800 rounded-lg px-6 py-8 ring shadow-xl ring-gray-900/5">
+  <div>
+    <span class="inline-flex items-center justify-center rounded-md bg-indigo-500 p-2 shadow-lg">
+      <svg class="h-6 w-6 stroke-white" ...>
+        <!-- ... -->
+      </svg>
+    </span>
+  </div>
+  <h3 class="text-gray-900 dark:text-white mt-5 text-base font-medium tracking-tight ">Writes upside-down</h3>
+  <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm ">
+    The Zero Gravity Pen can be used to write in any orientation, including upside-down. It even works in outer space.
+  </p>
+</div>
+By default this uses the prefers-color-scheme CSS media feature, but you can also build sites that support toggling dark mode manually by overriding the dark variant.
+
+## Toggling dark mode manually
+If you want your dark theme to be driven by a CSS selector instead of the prefers-color-scheme media query, override the dark variant to use your custom selector:
+
+app.css
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+Now instead of dark:* utilities being applied based on prefers-color-scheme, they will be applied whenever the dark class is present earlier in the HTML tree:
+
+HTML
+<html class="dark">
+  <body>
+    <div class="bg-white dark:bg-black">
+      <!-- ... -->
+    </div>
+  </body>
+</html>
+How you add the dark class to the html element is up to you, but a common approach is to use a bit of JavaScript that updates the class attribute and syncs that preference to somewhere like localStorage.
+
+
+
+## Using a data attribute
+To use a data attribute instead of a class to activate dark mode, just override the dark variant with an attribute selector instead:
+
+app.css
+@import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+Now dark mode utilities will be applied whenever the data-theme attribute is set to dark somewhere up the tree:
+
+HTML
+<html data-theme="dark">
+  <body>
+    <div class="bg-white dark:bg-black">
+      <!-- ... -->
+    </div>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,249 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Below is an instructive “cursor rule” for Styling that explains how to use Tailwind CSS v4’s new CSS-first configuration and theme variables, integrate ShadCN UI components, and animate with Motion for React. This guide provides clear step‑by‑step instructions, code examples, and inline notes for best practices in our Next.js 15 and React 19 environment.
+
+---
+
+## Cursor Rule for Styling with Tailwind CSS v4, ShadCN UI, and Motion.dev
+
+### Overview
+
+Our styling approach now leverages the latest tools:
+- **Tailwind CSS v4:** A modern, high‑performance utility‑first framework with a breakthrough CSS‑first configuration that lets you define design tokens directly in your CSS.
+- **ShadCN UI:** A collection of pre‑built, accessible React components optimized for React 19 and Tailwind v4. These components help enforce a consistent design language.  NOte the new installation path for ShadCN is now npx shadcn@latest init,  It is NOT npm install shadcn-ui (this is outdated!!)
+
+- **Motion.dev for React:** A powerful animation library with a hybrid engine that provides hardware‑accelerated animations, making complex animations simple.
+
+These tools combine to give you an optimized, consistent, and highly responsive UI development experience.
+
+---
+
+### Tailwind CSS v4: CSS‑First Configuration & Theme Variables
+
+#### CSS‑First Configuration
+
+One of the most significant changes in Tailwind CSS v4 is the shift from a JavaScript‑based configuration file (`tailwind.config.js`) to a CSS‑first approach. This means you can now import Tailwind and define your customizations directly in your CSS file, reducing configuration overhead and file clutter.
+
+**Example (globals.css):**
+```css
+@import "tailwindcss";
+/* Define your design tokens and custom utilities directly in CSS */
+@theme {
+  --font-display: "Satoshi", "sans-serif";
+  --breakpoint-3xl: 1920px;
+  --color-avocado-100: oklch(0.99 0 0);
+  --color-avocado-200: oklch(0.98 0.04 113.22);
+  --color-avocado-300: oklch(0.94 0.11 115.03);
+  --color-avocado-400: oklch(0.92 0.19 114.08);
+  --color-avocado-500: oklch(0.84 0.18 117.33);
+  --color-avocado-600: oklch(0.53 0.12 118.34);
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  /* ... additional tokens ... */
+}
+```
+
+*What Happens Under the Hood:*  
+Tailwind automatically converts these theme definitions into CSS custom properties on the `:root`, allowing you to use them anywhere in your project. This means you can reference your design tokens directly as inline styles or pass them to libraries like Motion for React when animating properties.
+
+**Generated CSS:**
+```css
+:root {
+  --font-display: "Satoshi", "sans-serif";
+  --breakpoint-3xl: 1920px;
+  --color-avocado-100: oklch(0.99 0 0);
+  --color-avocado-200: oklch(0.98 0.04 113.22);
+  /* ... */
+}
+```
+
+---
+
+### ShadCN UI Components
+
+#### Getting Started
+
+ShadCN UI offers a suite of pre‑designed React components that work seamlessly with Tailwind v4 and React 19. These components are built for accessibility and consistency, reducing the time spent on low‑level styling.
+
+**Installation & Setup:**
+
+1. **Initialize your project with ShadCN:**
+   Run the init command to either create a new Next.js project or set up an existing one:
+   ```bash
+   npx shadcn@latest init
+   ```
+   You will be prompted to choose between a Next.js project or a Monorepo.
+
+2. **Add Components:**
+   To add a component, such as a Button, run:
+   ```bash
+   npx shadcn@latest add button
+   ```
+   This command installs the component and its styles into your project.
+
+3. **Usage Example:**
+   Import and use the component in your Next.js pages:
+   ```jsx
+   import { Button } from "@/components/ui/button";
+
+   export default function Home() {
+     return (
+       <div className="p-4">
+         <Button>Click me</Button>
+       </div>
+     );
+   }
+   ```
+
+#### How ShadCN Works with Tailwind v4
+
+- **Full Tailwind v4 Support:**  
+  New projects initialized with ShadCN start with Tailwind v4 and React 19. All components are updated for the new configuration and take advantage of CSS theme variables.
+- **Improved Styling:**  
+  Components now use a default style that emphasizes a clean, modern aesthetic (e.g., using the new “new‑york” default style). They also include a `data-slot` attribute on primitives for easier styling and debugging.
+- **CLI Updates:**  
+  The CLI now initializes projects with Tailwind v4 by default. Existing projects using Tailwind v3 and React 18 will remain unchanged until you upgrade.
+
+*For further details, check out the [ShadCN React 19 documentation](mdc:https:/ui.shadcn.com/docs/react-19).*
+
+---
+
+### Motion.dev for React Animations
+
+#### Quick Start & Installation
+
+Motion for React is a versatile animation library that supports hardware‑accelerated, hybrid animations. It’s the only library that provides both the tiny “mini” animate for basic tasks and the full “hybrid” animate for more complex sequences.
+
+**Installation:**
+```bash
+npm install motion
+```
+
+**Importing Motion in Your Project:**
+```jsx
+import { motion } from "motion/react";
+```
+
+#### Basic Usage
+
+Animate a component easily by using the `<motion />` component and setting the `animate` prop:
+```jsx
+export default function AnimatedBox() {
+  return (
+    <motion.div
+      className="w-32 h-32 bg-blue-500 rounded"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 2 }}
+    />
+  );
+}
+```
+
+*Advanced Usage & Upgrade Notes:*  
+Motion’s API has evolved—callbacks now include the target element as the first parameter for better consistency, and features such as independent transforms have been optimized for performance. For a full list of changes and upgrade instructions, see the [Motion.dev React Quick Start guide](mdc:https:/motion.dev/docs/react-quick-start).
+
+---
+Transitions
+A transition defines the type of animation used when animating between two values.
+
+const transition = {
+  duration: 0.8,
+  delay: 0.5,
+  ease: [0, 0.71, 0.2, 1.01],
+}
+// Motion component
+<motion.div
+  animate={{ x: 100 }}
+  transition={transition}
+/>
+
+// animate() function
+animate(".box", { x: 100 }, transition)
+
+
+Setting a transition
+transition can be set on any animation prop, and that transition will be used when the animation fires.
+
+<motion.div
+  whileHover={{
+    scale: 1.1,
+    transition: { duration: 0.2 }
+  }}
+/>
+Value-specific transitions
+When animating multiple values, each value can be animated with a different transition, with default handling all other values:
+
+// Motion component
+<motion.li
+  animate={{
+    x: 0,
+    opacity: 1,
+    transition: {
+      default: { type: "spring" },
+      opacity: { ease: "linear" }
+    }
+  }}
+/>
+
+// animate() function
+animate("li", { x: 0, opacity: 1 }, {
+  default: { type: "spring" },
+  opacity: { ease: "linear" }
+})
+Default transitions
+It's possible to set default transitions via the transition prop. Either for specific motion components:
+
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ type: "spring", stiffness: 100 }}
+/>
+Or for a group of motion components via MotionConfig:
+
+<MotionConfig transition={{ duration: 0.4, ease: "easeInOut" }}>
+  <App />
+</MotionConfig>
+Transition settings
+type
+Default: Dynamic
+
+type decides the type of animation to use. It can be "tween", "spring" or "inertia".
+
+Tween animations are set with a duration and an easing curve.
+
+Spring animations are either physics-based or duration-based.
+
+Physics-based spring animations are set via stiffness, damping and mass, and these incorporate the velocity of any existing gestures or animations for natural feedback.
+
+
+
+### Integration & Best Practices
+
+1. **Modular Approach:**  
+   - Use **Tailwind CSS v4** to handle utility‑first styling and define your design tokens directly in your CSS.
+   - Leverage **ShadCN UI** components to quickly build accessible, consistent interfaces.
+   - Enhance interactions with **Motion.dev** for smooth, hardware‑accelerated animations.
+
+2. **Configuration:**  
+   - **Tailwind CSS v4:** Configure design tokens and custom utilities using the `@theme` directive in your CSS. This CSS‑first configuration centralizes your theme in one file.
+   - **ShadCN:** Use the CLI to initialize your project and add new components. Update your components by following the ShadCN documentation, ensuring you’re taking full advantage of Tailwind v4’s capabilities.
+   - **Motion:** Import from `"motion/react"` and follow the latest API conventions for animations. Be aware of the changes in callback signatures and the differences between the mini and hybrid animate functions.
+
+3. **Consistency & Responsiveness:**  
+   - Combine Tailwind’s utility classes with ShadCN’s component abstractions for a consistent look and feel.
+   - Use Motion.dev to animate interactions, transitions, and other dynamic elements, ensuring a smooth and responsive UI.
+   - Regularly review upgrade guides and documentation to stay current with changes in Tailwind v4, ShadCN, and Motion.dev.
+
+---
+
+### Summary
+
+- **Tailwind CSS v4:** Embrace the new CSS‑first configuration and theme variables to centralize design tokens, simplify configuration, and leverage modern CSS features.
+- **ShadCN UI:** Quickly set up and add high‑quality, accessible UI components using the updated CLI. Use these components to enforce consistency and improve developer productivity.
+- **Motion.dev:** Integrate Motion for React to add fluid, hardware‑accelerated animations with a straightforward API and advanced animation capabilities.
+
+This rule ensures that your team follows best practices for styling in our Next.js 15/React 19 projects while staying up to date with the latest enhancements from Tailwind v4, ShadCN, and Motion.dev.
+
+*(Citations: [ShadCN React 19 Docs](mdc:https:/ui.shadcn.com/docs/react-19), [Tailwind CSS v4 Blog](mdc:https:/tailwindcss.com/blog/tailwindcss-v4), [Motion.dev React Quick Start](mdc:https:/motion.dev/docs/react-quick-start).)*

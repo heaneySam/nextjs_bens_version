@@ -1,0 +1,241 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Below is an expanded section covering the new React 19 APIs. This mini-guide details how Actions work and introduces the new hooks and APIs that make handling asynchronous mutations, optimistic updates, and server-driven behavior much more streamlined.
+
+---
+
+### React 19: New APIs and Features
+
+#### 1. Actions  
+**Overview:**  
+Actions in React 19 let you encapsulate asynchronous mutations (like form submissions) by handling pending states, error handling, and even optimistic updates automatically. Rather than manually setting state to indicate loading or error conditions, you wrap your async logic inside a transition so that React can manage the state for you.
+
+**Before Actions Example:**
+```jsx
+// ❗ BEFORE: Manually managing pending and error state
+function UpdateName() {
+  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [isPending, setIsPending] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsPending(true);
+    const err = await updateName(name);
+    setIsPending(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    redirect("/path");
+  };
+
+  return (
+    <div>
+      <input value={name} onChange={e => setName(e.target.value)} />
+      <button onClick={handleSubmit} disabled={isPending}>Update</button>
+      {error && <p>{error}</p>}
+    </div>
+  );
+}
+```
+
+**After Actions Example (Using Transitions):**
+```jsx
+// ✅ AFTER: Using async transitions for automatic pending state
+function UpdateName() {
+  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = () => {
+    startTransition(async () => {
+      const err = await updateName(name);
+      if (err) {
+        setError(err);
+        return;
+      }
+      redirect("/path");
+    });
+  };
+
+  return (
+    <div>
+      <input value={name} onChange={e => setName(e.target.value)} />
+      <button onClick={handleSubmit} disabled={isPending}>Update</button>
+      {error && <p>{error}</p>}
+    </div>
+  );
+}
+```
+
+> **Note:** By convention, functions using async transitions are called **Actions**. They automatically provide pending states, support optimistic updates, and integrate with form elements when passed as the `action` or `formAction` prop.
+
+---
+
+#### 2. useActionState  
+**Overview:**  
+The new `useActionState` hook streamlines common cases for async actions (often called “Actions”). It wraps your async function, automatically tracking its pending state and returning its result.
+
+**Usage Example:**
+```jsx
+// Using useActionState for a form action:
+function ChangeName({ name, setName }) {
+  const [error, submitAction, isPending] = useActionState(
+    async (prevState, formData) => {
+      const err = await updateName(formData.get("name"));
+      if (err) {
+        return err;
+      }
+      redirect("/path");
+      return null;
+    },
+    null
+  );
+
+  return (
+    <form action={submitAction}>
+      <input type="text" name="name" />
+      <button type="submit" disabled={isPending}>Update</button>
+      {error && <p>{error}</p>}
+    </form>
+  );
+}
+```
+
+> **Note:** This hook was formerly known as `useFormState` in the Canary releases but has been renamed to `useActionState` to reflect its broader applicability.
+
+---
+
+#### 3. useOptimistic  
+**Overview:**  
+The `useOptimistic` hook enables you to immediately update the UI with an "optimistic" value before your asynchronous request completes. This improves the user experience by providing instant feedback.
+
+**Usage Example:**
+```jsx
+function ChangeName({ currentName, onUpdateName }) {
+  const [optimisticName, setOptimisticName] = useOptimistic(currentName);
+
+  const submitAction = async (formData) => {
+    const newName = formData.get("name");
+    // Immediately update the UI with the optimistic value
+    setOptimisticName(newName);
+    const updatedName = await updateName(newName);
+    onUpdateName(updatedName);
+  };
+
+  return (
+    <form action={submitAction}>
+      <p>Your name is: {optimisticName}</p>
+      <label>
+        Change Name:
+        <input type="text" name="name" disabled={currentName !== optimisticName} />
+      </label>
+    </form>
+  );
+}
+```
+
+> **Tip:** When the async request finishes or fails, React automatically reverts the optimistic update to the correct value.
+
+---
+
+#### 4. Form Actions & useFormStatus  
+**Form Actions:**  
+React 19 integrates with `<form>` elements by allowing you to pass functions as the `action` and `formAction` props. When these functions (Actions) complete successfully, the form resets automatically, reducing boilerplate code.
+
+**useFormStatus Hook:**  
+This hook lets you access the status of a parent `<form>` (e.g., whether it is pending) without prop drilling.
+
+**Usage Example:**
+```jsx
+import { useFormStatus } from 'react-dom';
+
+function DesignButton() {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={pending}>Submit</button>;
+}
+```
+
+> **Note:** These APIs allow design systems to integrate deeply with form state management without requiring explicit context passing.
+
+---
+
+#### 5. The use API  
+**Overview:**  
+The new `use` API lets you consume promises or other thenables directly in render. When a promise passed to `use` hasn’t resolved, React will suspend rendering of that component (or its subtree) until it resolves.
+
+**Usage Example:**
+```jsx
+import { use, Suspense } from 'react';
+
+function Comments({ commentsPromise }) {
+  const comments = use(commentsPromise);
+  return comments.map(comment => <p key={comment.id}>{comment.text}</p>);
+}
+
+function Page({ commentsPromise }) {
+  return (
+    <Suspense fallback={<div>Loading comments...</div>}>
+      <Comments commentsPromise={commentsPromise} />
+    </Suspense>
+  );
+}
+```
+
+> **Warning:** Do not create promises directly in render and pass them to `use`. Instead, create them outside and then pass the promise—this ensures proper caching and avoids unwanted warnings.
+
+Additionally, `use` can also read from context conditionally:
+```jsx
+import { use } from 'react';
+import ThemeContext from './ThemeContext';
+
+function Heading({ children }) {
+  if (!children) return null;
+  const theme = use(ThemeContext);
+  return <h1 style={{ color: theme.color }}>{children}</h1>;
+}
+```
+
+---
+
+#### 6. React Server Components and useServer  
+**React Server Components:**  
+Server Components let you render parts of your app on the server without including their code in the client bundle. They allow you to read from databases or perform file system operations securely on the server.
+
+**Key Points:**
+- Server Components are rendered ahead of time (at build time or per request) and can be streamed to the client.
+- They run in a separate server environment (the “server” in React Server Components) and are not bundled into client-side JavaScript.
+- They improve performance and security since sensitive operations happen server-side.
+
+**Usage Example:**
+```jsx
+// In a file like app/ServerComponent.server.jsx
+export default function ServerComponent({ userId }) {
+  // Perform server-only operations (e.g., database queries)
+  const user = getUserFromDatabase(userId);
+  return <div>Welcome, {user.name}!</div>;
+}
+```
+
+**useServer (Hypothetical):**  
+While the core React Server Components API does not include a dedicated hook called `useServer`, you can think of server-only functions (e.g., database queries or API calls) as part of the server component’s implementation. Some frameworks may offer a `useServer` utility to enforce that a function is only called on the server.
+
+> **Note:** The `"use server"` directive is used exclusively for **Server Actions**. There isn’t a `"use server"` directive for Server Components. Instead, you design components in files with a `.server.js` or `.server.jsx` extension and rely on bundler configuration to keep them on the server.
+
+---
+
+### Summary
+
+- **Actions**: Encapsulate asynchronous state updates for data mutations.
+- **useActionState**: Wraps an async function and automatically tracks pending state and results.
+- **useOptimistic**: Supports instant UI feedback during mutations.
+- **Form Actions & useFormStatus**: Integrate form submission handling with automatic form resets and contextual status tracking.
+- **use API**: Enables synchronous consumption of asynchronous resources in render.
+- **React Server Components**: Allow you to render secure, server-only components with no client-side footprint.
+
+Together, these new APIs in React 19 simplify handling asynchronous operations, improve performance with concurrent rendering, and offer enhanced patterns for building modern, full‑stack React applications.
+
+*(Citations: React 19 Overview citeturn0search0; Next.js 15 & React 19 integrations citeturn0search7.)*

@@ -1,0 +1,331 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Cursor Rule for Next.js 15 & React 19
+
+### General Guidelines
+- **Use the Latest APIs:**  
+  Leverage React 19’s new hooks (such as `useTransition`, `useActionState`, and the new `use` API) and Next.js 15’s App Router exclusively.  
+- **Server Actions:**  
+  Mark any server-side functions that need to be callable from the client with the `"use server"` directive.  
+- **Avoid Inline Promises in Render:**  
+  **❗ WARNING:** Do not create promises inside render. Instead, define data-fetching functions outside render and use the `use` API to resolve promises.  
+  
+  ```
+  // Good:
+  const dataPromise = fetchData(); // defined outside render
+  const data = use(dataPromise); // inside render
+
+  // ❗ BAD:
+  const data = use(fetchData()); // Avoid creating the promise directly in render.
+  ```
+
+- **Async Patterns:**  
+  Replace synchronous calls (e.g. accessing cookies, headers, params, and searchParams) with asynchronous patterns using `await`.
+
+*(See React 19 docs citeturn0search0 and Next.js 15 docs citeturn0search7 for details.)*
+
+---
+
+### Ser
+
+### Routing
+- **App Router Only:**  
+  Use Next.js 15’s App Router exclusively. Do not mix with the Pages Router ever.  Say NO to Page Router!.
+- **Dynamic Routes:**  
+  Follow Next.js conventions for dynamic segments. For example, use file names like `[slug]` and ensure you handle dynamic parameters asynchronously.
+*Basic Dynamic Routes*
+- Create dynamic routes using square brackets: [paramName] (e.g., app/blog/[slug]/page.js).
+    export default async function Page({
+      params,
+    }: {
+      params: Promise<{ slug: string }>
+    }) {
+      const { slug } = await params
+      return <div>My Post: {slug}</div>
+    }
+
+*Async Params*:
+❗ IMPORTANT: The params prop is now a Promise in Next.js 15. Always use async/await or React's use API to access values.
+      // Good:
+      const { slug } = await params 
+
+      // ❗ BAD (will be deprecated):
+      const { slug } = params // Synchronous access is deprecated
+
+*Catch-all Segments*
+Use ellipsis inside brackets [...folderName] to match multiple segments.
+
+      // app/shop/[...slug]/page.js
+      // Will match /shop/a, /shop/a/b, /shop/a/b/c, etc.
+      // params will be: { slug: ['a'] }, { slug: ['a', 'b'] }, { slug: ['a', 'b', 'c'] }
+
+*Optional Catch-all:*
+Double brackets [[...folderName]] make the parameter optional (also matches the root route).
+    // app/shop/[[...slug]]/page.js
+    // Also matches /shop (with params: { slug: undefined })
+
+
+*Static Generation:*
+Use generateStaticParams to pre-generate routes at build time. Fetch calls inside this function are automatically memoized.
+      export async function generateStaticParams() {
+        const posts = await fetch('https://.../posts').then((res) => res.json())
+        
+        return posts.map((post) => ({
+          slug: post.slug,
+        }))
+      }
+
+*Typescript Types*
+Define proper types based on your route pattern:
+// Basic dynamic segment: { paramName: string }
+// Catch-all: { paramName: string[] }
+// Optional catch-all: { paramName?: string[] }
+// Multiple params: { param1: string, param2: string }
+
+- **Prefetch & Suspense:**  
+  Consider prefetching routes using `<Link prefetch>` and wrap route segments that might load slowly in `<Suspense>` boundaries.
+
+---
+
+### Data Fetching
+- **Server-Side Fetching:**  
+  In Server Components, fetch data using the native `fetch` API or an ORM, and await those calls in an async component.  
+  ```
+    export default async function Page() {
+    const res = await fetch('https://api.example.com/posts');
+    const posts = await res.json();
+    return (
+      <ul>
+        {posts.map(post => <li key={post.id}>{post.title}</li>)}
+      </ul>
+    );
+  }
+  ```
+
+- **Server Actions**
+
+Definition Methods:
+Define Server Actions using the "use server" directive at either:
+
+Function level (inline within a component)
+Module level (at the top of a file)
+
+    // Inline in Server Component
+    async function saveData(formData) {
+      'use server'
+      // Server-side code
+    }
+
+    // Module level (in separate file)
+    'use server'
+    export async function saveData(formData) {
+      // Server-side code
+    }
+
+Form Integration:
+Use with the HTML <form> element via the action attribute. Forms automatically receive the FormData object.
+
+    // Server Component with inline action
+    export default function Form() {
+      async function handleSubmit(formData) {
+        'use server'
+        const name = formData.get('name')
+        // Process data
+      }
+      
+      return <form action={handleSubmit}>
+        <input name="name" />
+        <button type="submit">Submit</button>
+      </form>
+    }
+
+Client Component Usage:
+Import actions from a separate file in Client Components:
+
+      // actions.js
+      'use server'
+      export async function updateUser(formData) { /* ... */ }
+
+      // client-component.js
+      'use client'
+      import { updateUser } from './actions'
+
+      export function UserProfile() {
+        return <form action={updateUser}>
+          {/* form fields */}
+        </form>
+      }
+
+Progressive Enhancement:
+Forms using Server Actions work even if JavaScript hasn't loaded yet, prioritizing:
+
+Server Components: Default progressive enhancement
+Client Components: Queue submissions until hydration completes
+
+
+Error Handling and Validation:
+Validate form data on the server and return structured errors:
+
+
+      'use server'
+
+      export async function createUser(prevState, formData) {
+        // Validate form data
+        if (!isValid(formData)) {
+          return { error: 'Invalid data' }
+        }
+        
+        // Process data if valid
+      }
+
+React Hooks Integration:
+Use Server Actions with React hooks for enhanced UX:
+
+useActionState: For tracking state and errors
+useFormStatus: For pending states
+useOptimistic: For optimistic UI updates
+
+
+      'use client'
+
+      function SignupForm() {
+        const [state, formAction] = useActionState(createUser, {})
+        
+        return (
+          <form action={formAction}>
+            {/* Form fields */}
+            {state.error && <p>{state.error}</p>}
+            <SubmitButton />
+          </form>
+        )
+      }
+
+      function SubmitButton() {
+        const { pending } = useFormStatus()
+        return <button disabled={pending}>Submit</button>
+      }
+
+Passing Arguments:
+Pass additional arguments using bind():
+
+      // Client component
+      const updateWithId = updateUser.bind(null, userId)
+      return <form action={updateWithId}>...</form>
+
+      // Server action
+      'use server'
+      export async function updateUser(userId, formData) { /* ... */ }
+
+Revalidation and Redirects:
+Integrate with Next.js cache operations:
+
+    'use server'
+    import { revalidatePath, revalidateTag, redirect } from 'next/cache'
+
+    export async function createPost() {
+      // Process data
+      revalidatePath('/posts') // Revalidate specific path
+      // OR
+      revalidateTag('posts') // Revalidate by tag
+      
+      redirect(`/posts/${newId}`) // Redirect after completion
+    }
+
+- **Memoization:**  
+  Remember that `fetch` calls are automatically memoized during a render pass, so repeated calls for the same resource won’t refetch the data.
+- **Incremental Static Regeneration (ISR):**  
+  Use ISR (or on‑demand revalidation) when appropriate. By default, GET Route Handlers and client-side navigations are uncached in Next.js 15; opt into caching explicitly if needed.
+
+  ```
+  // Enable caching for a route:
+  export const dynamic = 'force-static'; // ❗ Be cautious: caching assumptions may change.
+  ```
+
+- **Security Consideration:**  
+  When fetching sensitive data, consider using React’s taint APIs to prevent accidental client exposure.
+
+---
+
+### Rendering
+- **Server Components & Streaming:**  
+  Use React 19’s Server Components with streaming where possible. Wrap parts of the UI that depend on data in `<Suspense>` to provide graceful loading states.
+
+  import { Suspense } from 'react';
+
+  ```
+  export default function Page() {
+    return (
+      <div>
+        <h1>Dashboard</h1>
+        <Suspense fallback={<div>Loading stats...</div>}>
+          <StatsComponent />
+        </Suspense>
+      </div>
+    );
+  }
+  ```
+
+- **Async Transitions:**  
+  Use `useTransition` or `startTransition` for non-urgent state updates. This helps keep the UI responsive even while data is loading.
+
+  import { useTransition } from 'react';
+
+  function FilterComponent({ updateFilter }) {
+    const [isPending, startTransition] = useTransition();
+    const onFilterChange = (value) => {
+      // Immediate UI feedback for input
+      updateFilter(value);
+      // Non-urgent update for re-rendering filtered results
+      startTransition(() => {
+        // trigger heavy UI update
+      });
+    };
+    return <input onChange={(e) => onFilterChange(e.target.value)} />;
+  }
+  ```
+- **Promise Resolution in Render:**  
+  Always resolve promises using the `use` API outside of the render scope to avoid pitfalls.
+  
+---
+
+### Caching
+- **Default Behavior in Next.js 15:**  
+  Note that by default, GET Route Handlers and client navigations are uncached. To enable caching, explicitly set caching options.
+- **Opting In:**  
+  If you want caching for a specific route, use:
+  export const dynamic = 'force-static'; // This opts the route into static caching.
+  ```
+
+- **Cache Invalidation & Revalidation:**  
+  Use Next.js ISR features (like time‑based revalidation or on‑demand revalidation via `revalidatePath` or `revalidateTag`) for dynamic content updates.
+- **Error Handling:**  
+  Always implement robust error boundaries and log errors inline when asynchronous code fails.
+
+*(See Next.js caching and ISR docs citeturn0search3.)*
+
+---
+
+### Configuring
+- **Async Access for Request Data:**  
+  Convert synchronous APIs (cookies, headers, params, searchParams) to asynchronous patterns. For example:
+  import { cookies } from 'next/headers';
+
+  export async function AdminPanel() {
+    // ❗ WARNING: Synchronous access is deprecated.
+    const cookieStore = await cookies(); // Use async access.
+    const token = cookieStore.get('token');
+    if (!token) {
+      console.error('Token missing');
+      return <ErrorComponent message="Authentication error" />;
+    }
+    return <div>Admin Panel</div>;
+  }
+  ```
+- **Next.js Config Options:**  
+  Use `next.config.ts` to adjust caching, bundling, and other performance-related settings. Follow the official documentation to keep these updated.
+- **Developer Warnings & Comments:**  
+  Add inline comments (as shown above) to warn about deprecated patterns (e.g., synchronous access and inline promise creation).
+

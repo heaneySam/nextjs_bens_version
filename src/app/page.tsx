@@ -1,23 +1,46 @@
-import LoginForm from '../components/LoginForm';
+import Image from 'next/image';
+import { auth } from './auth';
+import LoginForm from '@/components/login/LoginForm';
+import ToasterProvider from '@/components/providers/ToasterProvider';
 
 export default async function Home() {
-  // fetch() here runs on the Next.js server
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health/`, { cache: "no-store" });
-  const { status } = await res.json();
+  const session = await auth();
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      {/* show the health status at top */}
-      <p className="absolute top-4 right-4 text-sm">Backend health: {status}</p>
+    <div className="flex min-h-screen flex-col bg-background">
+      <ToasterProvider />
+      <div className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
+        <div className="w-full max-w-7xl mx-auto py-12 sm:py-16 md:py-24 lg:py-32 flex flex-col lg:flex-row lg:items-center lg:gap-x-10">
+          {/* Content column */}
+          <div className="w-full lg:w-1/2 flex-shrink-0 mb-12 lg:mb-0">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+              Risk Intelligence Platform
+            </h1>
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-muted-foreground">
+              Advanced analytics and risk modeling for maritime, country, and catastrophe risk assessment. Make better decisions with real-time intelligence and comprehensive risk metrics.
+            </p>
+            {!session?.user && (
+              <div className="mt-8 sm:mt-10">
+                <LoginForm />
+              </div>
+            )}
+          </div>
 
-      <main className="…">
-        {/* Add Magic-Link LoginForm */}
-        <LoginForm />
-      </main>
-
-      <footer className="…">
-        {/* … your existing footer … */}
-      </footer>
+          {/* Image column - hidden on very small screens */}
+          <div className="w-full lg:w-1/2 flex-shrink-0 hidden sm:block">
+            <div className="rounded-md bg-background/5 shadow-2xl ring-1 ring-foreground/10 overflow-hidden">
+              <Image
+                src="/images/dashboard-preview.png"
+                alt="App screenshot"
+                width={2432}
+                height={1442}
+                className="w-full h-auto"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

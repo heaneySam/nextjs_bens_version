@@ -1,0 +1,959 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+use
+use is a React API that lets you read the value of a resource like a Promise or context.
+
+const value = use(resource);
+Reference
+use(resource)
+Usage
+Reading context with use
+Streaming data from the server to the client
+Dealing with rejected Promises
+Troubleshooting
+“Suspense Exception: This is not a real error!”
+Reference 
+use(resource) 
+Call use in your component to read the value of a resource like a Promise or context.
+
+import { use } from 'react';
+
+function MessageComponent({ messagePromise }) {
+  const message = use(messagePromise);
+  const theme = use(ThemeContext);
+  // ...
+Unlike React Hooks, use can be called within loops and conditional statements like if. Like React Hooks, the function that calls use must be a Component or Hook.
+
+When called with a Promise, the use API integrates with Suspense and error boundaries. The component calling use suspends while the Promise passed to use is pending. If the component that calls use is wrapped in a Suspense boundary, the fallback will be displayed.  Once the Promise is resolved, the Suspense fallback is replaced by the rendered components using the data returned by the use API. If the Promise passed to use is rejected, the fallback of the nearest Error Boundary will be displayed.
+
+See more examples below.
+
+Parameters 
+resource: this is the source of the data you want to read a value from. A resource can be a Promise or a context.
+Returns 
+The use API returns the value that was read from the resource like the resolved value of a Promise or context.
+
+Caveats 
+The use API must be called inside a Component or a Hook.
+When fetching data in a Server Component, prefer async and await over use. async and await pick up rendering from the point where await was invoked, whereas use re-renders the component after the data is resolved.
+Prefer creating Promises in Server Components and passing them to Client Components over creating Promises in Client Components. Promises created in Client Components are recreated on every render. Promises passed from a Server Component to a Client Component are stable across re-renders. See this example.
+Usage 
+Reading context with use 
+When a context is passed to use, it works similarly to useContext. While useContext must be called at the top level of your component, use can be called inside conditionals like if and loops like for. use is preferred over useContext because it is more flexible.
+
+import { use } from 'react';
+
+function Button() {
+  const theme = use(ThemeContext);
+  // ...
+use returns the context value for the context you passed. To determine the context value, React searches the component tree and finds the closest context provider above for that particular context.
+
+To pass context to a Button, wrap it or one of its parent components into the corresponding context provider.
+
+function MyPage() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  );
+}
+
+function Form() {
+  // ... renders buttons inside ...
+}
+It doesn’t matter how many layers of components there are between the provider and the Button. When a Button anywhere inside of Form calls use(ThemeContext), it will receive "dark" as the value.
+
+Unlike useContext, use can be called in conditionals and loops like if.
+
+function HorizontalRule({ show }) {
+  if (show) {
+    const theme = use(ThemeContext);
+    return <hr className={theme} />;
+  }
+  return false;
+}
+use is called from inside a if statement, allowing you to conditionally read values from a Context.
+
+
+
+Pitfall
+Like useContext, use(context) always looks for the closest context provider above the component that calls it. It searches upwards and does not consider context providers in the component from which you’re calling use(context).
+
+
+
+Example Code:
+import { createContext, use } from 'react';
+
+const ThemeContext = createContext(null);
+
+export default function MyApp() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  )
+}
+
+function Form() {
+  return (
+    <Panel title="Welcome">
+      <Button show={true}>Sign up</Button>
+      <Button show={false}>Log in</Button>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = use(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+    <section className={className}>
+      <h1>{title}</h1>
+      {children}
+    </section>
+  )
+}
+
+function Button({ show, children }) {
+  if (show) {
+    const theme = use(ThemeContext);
+    const className = 'button-' + theme;
+    return (
+      <button className={className}>
+        {children}
+      </button>
+    );
+  }
+  return false
+}
+
+
+
+Streaming data from the server to the client 
+Data can be streamed from the server to the client by passing a Promise as a prop from a Server Component to a Client Component.
+
+import { fetchMessage } from './lib.js';
+import { Message } from './message.js';
+
+export default function App() {
+  const messagePromise = fetchMessage();
+  return (
+    <Suspense fallback={<p>waiting for message...</p>}>
+      <Message messagePromise={messagePromise} />
+    </Suspense>
+  );
+}
+The Client Component then takes the Promise it received as a prop and passes it to the use API. This allows the Client Component to read the value from the Promise that was initially created by the Server Component.
+
+// message.js
+'use client';
+
+import { use } from 'react';
+
+export function Message({ messagePromise }) {
+  const messageContent = use(messagePromise);
+  return <p>Here is the message: {messageContent}</p>;
+}
+Because Message is wrapped in Suspense, the fallback will be displayed until the Promise is resolved. When the Promise is resolved, the value will be read by the use API and the Message component will replace the Suspense fallback.
+
+
+
+"use client";
+
+import { use, Suspense } from "react";
+
+function Message({ messagePromise }) {
+  const messageContent = use(messagePromise);
+  return <p>Here is the message: {messageContent}</p>;
+}
+
+export function MessageContainer({ messagePromise }) {
+  return (
+    <Suspense fallback={<p>⌛Downloading message...</p>}>
+      <Message messagePromise={messagePromise} />
+    </Suspense>
+  );
+}
+
+
+Note
+When passing a Promise from a Server Component to a Client Component, its resolved value must be serializable to pass between server and client. Data types like functions aren’t serializable and cannot be the resolved value of such a Promise.
+
+
+
+Deep Dive --- Should I resolve a Promise in a Server or Client Component? 
+
+A Promise can be passed from a Server Component to a Client Component and resolved in the Client Component with the use API. You can also resolve the Promise in a Server Component with await and pass the required data to the Client Component as a prop.
+
+export default async function App() {
+  const messageContent = await fetchMessage();
+  return <Message messageContent={messageContent} />
+}
+But using await in a Server Component will block its rendering until the await statement is finished. Passing a Promise from a Server Component to a Client Component prevents the Promise from blocking the rendering of the Server Component.
+
+Dealing with rejected Promises 
+In some cases a Promise passed to use could be rejected. You can handle rejected Promises by either:
+
+
+Dealing with rejected Promises 
+In some cases a Promise passed to use could be rejected. You can handle rejected Promises by either:
+
+-    Displaying an error to users with an error boundary.
+-    Providing an alternative value with Promise.catch
+
+Pitfall
+use cannot be called in a try-catch block. Instead of a try-catch block wrap your component in an Error Boundary, or provide an alternative value to use with the Promise’s .catch method.
+
+Displaying an error to users with an error boundary 
+If you’d like to display an error to your users when a Promise is rejected, you can use an error boundary. To use an error boundary, wrap the component where you are calling the use API in an error boundary. If the Promise passed to use is rejected the fallback for the error boundary will be displayed.
+
+
+"use client";
+
+import { use, Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+
+export function MessageContainer({ messagePromise }) {
+  return (
+    <ErrorBoundary fallback={<p>⚠️Something went wrong</p>}>
+      <Suspense fallback={<p>⌛Downloading message...</p>}>
+        <Message messagePromise={messagePromise} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+function Message({ messagePromise }) {
+  const content = use(messagePromise);
+  return <p>Here is the message: {content}</p>;
+}
+
+
+Providing an alternative value with Promise.catch 
+If you’d like to provide an alternative value when the Promise passed to use is rejected you can use the Promise’s catch method.
+
+import { Message } from './message.js';
+
+export default function App() {
+  const messagePromise = new Promise((resolve, reject) => {
+    reject();
+  }).catch(() => {
+    return "no new message found.";
+  });
+
+  return (
+    <Suspense fallback={<p>waiting for message...</p>}>
+      <Message messagePromise={messagePromise} />
+    </Suspense>
+  );
+}
+To use the Promise’s catch method, call catch on the Promise object. catch takes a single argument: a function that takes an error message as an argument. Whatever is returned by the function passed to catch will be used as the resolved value of the Promise.
+
+Troubleshooting 
+“Suspense Exception: This is not a real error!” 
+You are either calling use outside of a React Component or Hook function, or calling use in a try–catch block. If you are calling use inside a try–catch block, wrap your component in an error boundary, or call the Promise’s catch to catch the error and resolve the Promise with another value. See these examples.
+
+If you are calling use outside a React Component or Hook function, move the use call to a React Component or Hook function.
+
+function MessageComponent({messagePromise}) {
+  function download() {
+    // ❌ the function calling `use` is not a Component or Hook
+    const message = use(messagePromise);
+    // ...
+Instead, call use outside any component closures, where the function that calls use is a Component or Hook.
+
+function MessageComponent({messagePromise}) {
+  // ✅ `use` is being called from a component. 
+  const message = use(messagePromise);
+  // ...
+
+
+
+  ## Create Context
+
+  createContext
+createContext lets you create a context that components can provide or read.
+
+const SomeContext = createContext(defaultValue)
+Reference
+createContext(defaultValue)
+SomeContext.Provider
+SomeContext.Consumer
+Usage
+Creating context
+Importing and exporting context from a file
+Troubleshooting
+I can’t find a way to change the context value
+Reference 
+createContext(defaultValue) 
+Call createContext outside of any components to create a context.
+
+import { createContext } from 'react';
+
+const ThemeContext = createContext('light');
+See more examples below.
+
+Parameters 
+defaultValue: The value that you want the context to have when there is no matching context provider in the tree above the component that reads context. If you don’t have any meaningful default value, specify null. The default value is meant as a “last resort” fallback. It is static and never changes over time.
+Returns 
+createContext returns a context object.
+
+The context object itself does not hold any information. It represents which context other components read or provide. Typically, you will use SomeContext.Provider in components above to specify the context value, and call useContext(SomeContext) in components below to read it. The context object has a few properties:
+
+SomeContext.Provider lets you provide the context value to components.
+SomeContext.Consumer is an alternative and rarely used way to read the context value.
+SomeContext.Provider 
+Wrap your components into a context provider to specify the value of this context for all components inside:
+
+function App() {
+  const [theme, setTheme] = useState('light');
+  // ...
+  return (
+    <ThemeContext.Provider value={theme}>
+      <Page />
+    </ThemeContext.Provider>
+  );
+}
+Props 
+value: The value that you want to pass to all the components reading this context inside this provider, no matter how deep. The context value can be of any type. A component calling useContext(SomeContext) inside of the provider receives the value of the innermost corresponding context provider above it.
+SomeContext.Consumer 
+Before useContext existed, there was an older way to read context:
+
+function Button() {
+  // 🟡 Legacy way (not recommended)
+  return (
+    <ThemeContext.Consumer>
+      {theme => (
+        <button className={theme} />
+      )}
+    </ThemeContext.Consumer>
+  );
+}
+Although this older way still works, newly written code should read context with useContext() instead:
+
+function Button() {
+  // ✅ Recommended way
+  const theme = useContext(ThemeContext);
+  return <button className={theme} />;
+}
+Props 
+children: A function. React will call the function you pass with the current context value determined by the same algorithm as useContext() does, and render the result you return from this function. React will also re-run this function and update the UI whenever the context from the parent components changes.
+Usage 
+Creating context 
+Context lets components pass information deep down without explicitly passing props.
+
+Call createContext outside any components to create one or more contexts.
+
+import { createContext } from 'react';
+
+const ThemeContext = createContext('light');
+const AuthContext = createContext(null);
+createContext returns a context object. Components can read context by passing it to useContext():
+
+function Button() {
+  const theme = useContext(ThemeContext);
+  // ...
+}
+
+function Profile() {
+  const currentUser = useContext(AuthContext);
+  // ...
+}
+By default, the values they receive will be the default values you have specified when creating the contexts. However, by itself this isn’t useful because the default values never change.
+
+Context is useful because you can provide other, dynamic values from your components:
+
+function App() {
+  const [theme, setTheme] = useState('dark');
+  const [currentUser, setCurrentUser] = useState({ name: 'Taylor' });
+
+  // ...
+
+  return (
+    <ThemeContext.Provider value={theme}>
+      <AuthContext.Provider value={currentUser}>
+        <Page />
+      </AuthContext.Provider>
+    </ThemeContext.Provider>
+  );
+}
+Now the Page component and any components inside it, no matter how deep, will “see” the passed context values. If the passed context values change, React will re-render the components reading the context as well.
+
+Read more about reading and providing context and see examples.
+
+Importing and exporting context from a file 
+Often, components in different files will need access to the same context. This is why it’s common to declare contexts in a separate file. Then you can use the export statement to make context available for other files:
+
+// Contexts.js
+import { createContext } from 'react';
+
+export const ThemeContext = createContext('light');
+export const AuthContext = createContext(null);
+Components declared in other files can then use the import statement to read or provide this context:
+
+// Button.js
+import { ThemeContext } from './Contexts.js';
+
+function Button() {
+  const theme = useContext(ThemeContext);
+  // ...
+}
+// App.js
+import { ThemeContext, AuthContext } from './Contexts.js';
+
+function App() {
+  // ...
+  return (
+    <ThemeContext.Provider value={theme}>
+      <AuthContext.Provider value={currentUser}>
+        <Page />
+      </AuthContext.Provider>
+    </ThemeContext.Provider>
+  );
+}
+This works similar to importing and exporting components.
+
+Troubleshooting 
+I can’t find a way to change the context value 
+Code like this specifies the default context value:
+
+const ThemeContext = createContext('light');
+This value never changes. React only uses this value as a fallback if it can’t find a matching provider above.
+
+To make context change over time, add state and wrap components in a context provider.
+
+
+useContext
+useContext
+useContext is a React Hook that lets you read and subscribe to context from your component.
+
+const value = useContext(SomeContext)
+Reference
+useContext(SomeContext)
+Usage
+Passing data deeply into the tree
+Updating data passed via context
+Specifying a fallback default value
+Overriding context for a part of the tree
+Optimizing re-renders when passing objects and functions
+Troubleshooting
+My component doesn’t see the value from my provider
+I am always getting undefined from my context although the default value is different
+Reference 
+useContext(SomeContext) 
+Call useContext at the top level of your component to read and subscribe to context.
+
+import { useContext } from 'react';
+
+function MyComponent() {
+  const theme = useContext(ThemeContext);
+  // ...
+See more examples below.
+
+Parameters 
+SomeContext: The context that you’ve previously created with createContext. The context itself does not hold the information, it only represents the kind of information you can provide or read from components.
+Returns 
+useContext returns the context value for the calling component. It is determined as the value passed to the closest SomeContext.Provider above the calling component in the tree. If there is no such provider, then the returned value will be the defaultValue you have passed to createContext for that context. The returned value is always up-to-date. React automatically re-renders components that read some context if it changes.
+
+Caveats 
+useContext() call in a component is not affected by providers returned from the same component. The corresponding <Context.Provider> needs to be above the component doing the useContext() call.
+React automatically re-renders all the children that use a particular context starting from the provider that receives a different value. The previous and the next values are compared with the Object.is comparison. Skipping re-renders with memo does not prevent the children receiving fresh context values.
+If your build system produces duplicates modules in the output (which can happen with symlinks), this can break context. Passing something via context only works if SomeContext that you use to provide context and SomeContext that you use to read it are exactly the same object, as determined by a === comparison.
+Usage 
+Passing data deeply into the tree 
+Call useContext at the top level of your component to read and subscribe to context.
+
+import { useContext } from 'react';
+
+function Button() {
+  const theme = useContext(ThemeContext);
+  // ...
+useContext returns the context value for the context you passed. To determine the context value, React searches the component tree and finds the closest context provider above for that particular context.
+
+To pass context to a Button, wrap it or one of its parent components into the corresponding context provider:
+
+function MyPage() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  );
+}
+
+function Form() {
+  // ... renders buttons inside ...
+}
+It doesn’t matter how many layers of components there are between the provider and the Button. When a Button anywhere inside of Form calls useContext(ThemeContext), it will receive "dark" as the value.
+
+Pitfall
+useContext() always looks for the closest provider above the component that calls it. It searches upwards and does not consider providers in the component from which you’re calling useContext().
+
+
+App.js
+Download
+Reset
+
+Fork
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+import { createContext, useContext } from 'react';
+
+const ThemeContext = createContext(null);
+
+export default function MyApp() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  )
+}
+
+function Form() {
+  return (
+    <Panel title="Welcome">
+      <Button>Sign up</Button>
+      <Button>Log in</Button>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+    <section className={className}>
+      <h1>{title}</h1>
+      {children}
+    </section>
+  )
+}
+
+function Button({ children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'button-' + theme;
+  return (
+
+
+Show more
+Updating data passed via context 
+Often, you’ll want the context to change over time. To update context, combine it with state. Declare a state variable in the parent component, and pass the current state down as the context value to the provider.
+
+function MyPage() {
+  const [theme, setTheme] = useState('dark');
+  return (
+    <ThemeContext.Provider value={theme}>
+      <Form />
+      <Button onClick={() => {
+        setTheme('light');
+      }}>
+        Switch to light theme
+      </Button>
+    </ThemeContext.Provider>
+  );
+}
+Now any Button inside of the provider will receive the current theme value. If you call setTheme to update the theme value that you pass to the provider, all Button components will re-render with the new 'light' value.
+
+Examples of updating context
+1. Updating a value via context
+2. Updating an object via context
+3. Multiple contexts
+4. Extracting providers to a component
+5. Scaling up with context and a reducer
+
+
+Example 1 of 5: Updating a value via context 
+In this example, the MyApp component holds a state variable which is then passed to the ThemeContext provider. Checking the “Dark mode” checkbox updates the state. Changing the provided value re-renders all the components using that context.
+
+
+App.js
+Download
+Reset
+
+Fork
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext(null);
+
+export default function MyApp() {
+  const [theme, setTheme] = useState('light');
+  return (
+    <ThemeContext.Provider value={theme}>
+      <Form />
+      <label>
+        <input
+          type="checkbox"
+          checked={theme === 'dark'}
+          onChange={(e) => {
+            setTheme(e.target.checked ? 'dark' : 'light')
+          }}
+        />
+        Use dark mode
+      </label>
+    </ThemeContext.Provider>
+  )
+}
+
+function Form({ children }) {
+  return (
+    <Panel title="Welcome">
+      <Button>Sign up</Button>
+      <Button>Log in</Button>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+
+
+Show more
+Note that value="dark" passes the "dark" string, but value={theme} passes the value of the JavaScript theme variable with JSX curly braces. Curly braces also let you pass context values that aren’t strings.
+
+Next Example
+Specifying a fallback default value 
+If React can’t find any providers of that particular context in the parent tree, the context value returned by useContext() will be equal to the default value that you specified when you created that context:
+
+const ThemeContext = createContext(null);
+The default value never changes. If you want to update context, use it with state as described above.
+
+Often, instead of null, there is some more meaningful value you can use as a default, for example:
+
+const ThemeContext = createContext('light');
+This way, if you accidentally render some component without a corresponding provider, it won’t break. This also helps your components work well in a test environment without setting up a lot of providers in the tests.
+
+In the example below, the “Toggle theme” button is always light because it’s outside any theme context provider and the default context theme value is 'light'. Try editing the default theme to be 'dark'.
+
+
+App.js
+Download
+Reset
+
+Fork
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext('light');
+
+export default function MyApp() {
+  const [theme, setTheme] = useState('light');
+  return (
+    <>
+      <ThemeContext.Provider value={theme}>
+        <Form />
+      </ThemeContext.Provider>
+      <Button onClick={() => {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+      }}>
+        Toggle theme
+      </Button>
+    </>
+  )
+}
+
+function Form({ children }) {
+  return (
+    <Panel title="Welcome">
+      <Button>Sign up</Button>
+      <Button>Log in</Button>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+    <section className={className}>
+      <h1>{title}</h1>
+      {children}
+
+
+Show more
+Overriding context for a part of the tree 
+You can override the context for a part of the tree by wrapping that part in a provider with a different value.
+
+<ThemeContext.Provider value="dark">
+  ...
+  <ThemeContext.Provider value="light">
+    <Footer />
+  </ThemeContext.Provider>
+  ...
+</ThemeContext.Provider>
+You can nest and override providers as many times as you need.
+
+Examples of overriding context
+1. Overriding a theme
+2. Automatically nested headings
+
+
+Example 1 of 2: Overriding a theme 
+Here, the button inside the Footer receives a different context value ("light") than the buttons outside ("dark").
+
+
+App.js
+Download
+Reset
+
+Fork
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+import { createContext, useContext } from 'react';
+
+const ThemeContext = createContext(null);
+
+export default function MyApp() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  )
+}
+
+function Form() {
+  return (
+    <Panel title="Welcome">
+      <Button>Sign up</Button>
+      <Button>Log in</Button>
+      <ThemeContext.Provider value="light">
+        <Footer />
+      </ThemeContext.Provider>
+    </Panel>
+  );
+}
+
+function Footer() {
+  return (
+    <footer>
+      <Button>Settings</Button>
+    </footer>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+
+
+Show more
+Next Example
+Optimizing re-renders when passing objects and functions 
+You can pass any values via context, including objects and functions.
+
+function MyApp() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  function login(response) {
+    storeCredentials(response.credentials);
+    setCurrentUser(response.user);
+  }
+
+  return (
+    <AuthContext.Provider value={{ currentUser, login }}>
+      <Page />
+    </AuthContext.Provider>
+  );
+}
+Here, the context value is a JavaScript object with two properties, one of which is a function. Whenever MyApp re-renders (for example, on a route update), this will be a different object pointing at a different function, so React will also have to re-render all components deep in the tree that call useContext(AuthContext).
+
+In smaller apps, this is not a problem. However, there is no need to re-render them if the underlying data, like currentUser, has not changed. To help React take advantage of that fact, you may wrap the login function with useCallback and wrap the object creation into useMemo. This is a performance optimization:
+
+import { useCallback, useMemo } from 'react';
+
+function MyApp() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const login = useCallback((response) => {
+    storeCredentials(response.credentials);
+    setCurrentUser(response.user);
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    currentUser,
+    login
+  }), [currentUser, login]);
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      <Page />
+    </AuthContext.Provider>
+  );
+}
+As a result of this change, even if MyApp needs to re-render, the components calling useContext(AuthContext) won’t need to re-render unless currentUser has changed.
+
+Read more about useMemo and useCallback.
+
+Troubleshooting 
+My component doesn’t see the value from my provider 
+There are a few common ways that this can happen:
+
+You’re rendering <SomeContext.Provider> in the same component (or below) as where you’re calling useContext(). Move <SomeContext.Provider> above and outside the component calling useContext().
+You may have forgotten to wrap your component with <SomeContext.Provider>, or you might have put it in a different part of the tree than you thought. Check whether the hierarchy is right using React DevTools.
+You might be running into some build issue with your tooling that causes SomeContext as seen from the providing component and SomeContext as seen by the reading component to be two different objects. This can happen if you use symlinks, for example. You can verify this by assigning them to globals like window.SomeContext1 and window.SomeContext2 and then checking whether window.SomeContext1 === window.SomeContext2 in the console. If they’re not the same, fix that issue on the build tool level.
+I am always getting undefined from my context although the default value is different 
+You might have a provider without a value in the tree:
+
+// 🚩 Doesn't work: no value prop
+<ThemeContext.Provider>
+   <Button />
+</ThemeContext.Provider>
+If you forget to specify value, it’s like passing value={undefined}.
+
+You may have also mistakingly used a different prop name by mistake:
+
+// 🚩 Doesn't work: prop should be called "value"
+<ThemeContext.Provider theme={theme}>
+   <Button />
+</ThemeContext.Provider>
+In both of these cases you should see a warning from React in the console. To fix them, call the prop value:
+
+// ✅ Passing the value prop
+<ThemeContext.Provider value={theme}>
+   <Button />
+</ThemeContext.Provider>
+Note that the default value from your createContext(defaultValue) call is only used if there is no matching provider above at all. If there is a <SomeContext.Provider value={undefined}> component somewhere in the parent tree, the component calling useContext(SomeContext) will receive undefined as the context value.
+
