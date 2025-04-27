@@ -14,11 +14,10 @@ export default async function Home() {
           {/* Content column */}
           <div className="w-full lg:w-1/2 flex-shrink-0 mb-12 lg:mb-0">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
-              Risk Intelligence Platform
+              Credit Insurance Syndications. Solved.
             </h1>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-muted-foreground">
-              Advanced analytics and risk modeling for maritime, country, and catastrophe risk assessment. Make better decisions with real-time intelligence and comprehensive risk metrics.
-            </p>
+            Comprehensive management of non-payment insurance portfolios.            </p>
             {!session?.user && (
               <div className="mt-8 sm:mt-10">
                 <LoginForm />

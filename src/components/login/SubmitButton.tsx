@@ -13,7 +13,12 @@ export default function SubmitButton({
   ...props
 }: SubmitButtonProps) {
   return (
-    <Button type="submit" disabled={isLoading} {...props}>
+    <Button
+      type="submit"
+      disabled={isLoading}
+      width="full"
+      {...props}
+    >
       {isLoading ? 'Sending…' : children}
     </Button>
   );

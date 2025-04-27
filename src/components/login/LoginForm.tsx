@@ -38,7 +38,7 @@ export default function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-6 bg-white rounded-lg shadow-md max-w-md mx-auto space-y-4"
+      className="p-6 bg-white rounded-lg shadow-md w-full space-y-6 text-left"
     >
       <h2 className="text-xl font-semibold">Sign in with Magic Link</h2>
       <label htmlFor="email" className="block text-sm font-medium">

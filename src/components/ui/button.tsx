@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/70",
         destructive:
           "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
@@ -27,10 +27,15 @@ const buttonVariants = cva(
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
       },
+      width: {
+        auto: "",
+        full: "w-full"
+      }
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      width: "auto"
     },
   }
 )
@@ -39,6 +44,7 @@ function Button({
   className,
   variant,
   size,
+  width,
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
@@ -50,7 +56,7 @@ function Button({
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, width, className }))}
       {...props}
     />
   )
