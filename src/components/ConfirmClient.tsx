@@ -31,6 +31,7 @@ export default function ConfirmClient() {
             body: JSON.stringify({ token }),
           }
         );
+        console.log('Response headers:', Array.from(res.headers.entries()));
         if (!res.ok) {
           const data = await res.json();
           throw new Error(data.detail || 'Failed to confirm login');
