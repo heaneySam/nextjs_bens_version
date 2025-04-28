@@ -1,28 +1,26 @@
 // Create a simple client-side login form for magic-link
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SubmitButton from '@/components/login/SubmitButton';
+import { login } from '@/app/auth-client';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  // Fetch CSRF token cookie on component mount
+  useEffect(() => {
+    fetch(`${API_URL}/api/auth/csrf/`, { credentials: 'include' });
+  }, [API_URL]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/code/request/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ email }),
-        }
-      );
-      const data = await res.json();
+      const data = await login(email);
       setMessage(
         data.detail ||
           "If that email is registered, you'll receive a magic link shortly."

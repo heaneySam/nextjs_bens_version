@@ -1,25 +1,3 @@
-export type AuthResponse = { user: { id: string; email: string } | null };
-
-// Server-side: forward incoming cookie header for SSR
-import { headers } from 'next/headers';
-
-export async function auth(): Promise<AuthResponse> {
-  // Forward 'cookie' header from incoming request
-  const reqHeaders = await headers();
-  const cookieHeader = reqHeaders.get('cookie') || '';
-  // Debug: log the cookie header being forwarded for authentication
-  console.debug('auth() - forwarded cookie header:', cookieHeader);
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/auth/session/`,
-    { cache: 'no-store', headers: { cookie: cookieHeader } }
-  );
-  if (!res.ok) {
-    return { user: null };
-  }
-  const data = (await res.json()) as AuthResponse;
-  return data;
-}
-
 /**
  * Request a magic link for login. Triggers the backend to send a magic link to the user's email.
  * @param email The user's email address
@@ -55,4 +33,4 @@ export async function refreshToken(): Promise<void> {
     method: 'POST',
     credentials: 'include',
   });
-} 
+}
