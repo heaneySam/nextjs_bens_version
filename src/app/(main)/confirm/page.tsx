@@ -48,11 +48,17 @@ export default function ConfirmPage() {
         setUser(sessionData.user);
         setStatus('success');
         toast.success('Signed in successfully!');
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Magic link confirmation error:', err);
-        setError(err.message || 'Error during sign-in');
+        let message = 'Error during sign-in';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
+        }
+        setError(message);
         setStatus('error');
-        toast.error(err.message || 'Error during sign-in');
+        toast.error(message);
       }
     }
 
