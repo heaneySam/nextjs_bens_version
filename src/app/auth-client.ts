@@ -23,14 +23,3 @@ export async function logout(): Promise<void> {
     credentials: 'include',
   });
 }
-
-/**
- * Silently refresh the access token using the refresh token in the cookie.
- * @returns void
- */
-export async function refreshToken(): Promise<void> {
-  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-}

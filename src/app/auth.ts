@@ -1,12 +1,14 @@
 export type AuthResponse = { user: { id: string; email: string } | null };
 
 // Server-side: forward incoming cookie header for SSR
-import { headers } from 'next/headers';
+import { cookies } from 'next/headers';
 
 export async function auth(): Promise<AuthResponse> {
   // Forward 'cookie' header from incoming request
-  const reqHeaders = await headers();
-  const cookieHeader = reqHeaders.get('cookie') || '';
+  const cookieStore = await cookies();
+  // Build Cookie header manually to avoid dynamic toString()
+  const allCookies = cookieStore.getAll();
+  const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
   // Debug: log the cookie header being forwarded for authentication
   console.debug('auth() - forwarded cookie header:', cookieHeader);
   const res = await fetch(

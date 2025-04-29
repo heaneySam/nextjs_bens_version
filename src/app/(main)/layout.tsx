@@ -1,3 +1,6 @@
+// Force dynamic rendering so cookies() API is allowed
+export const dynamic = 'force-dynamic';
+
 import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { auth } from '../auth';
