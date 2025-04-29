@@ -4,7 +4,7 @@ import { auth } from './auth';
 import LoginForm from '@/components/login/LoginForm';
 import ToasterProvider from '@/components/providers/ToasterProvider';
 
-export default async function Home(props: any) {
+export default async function Home() {
   const session = await auth();
   if (session.user) {
     redirect('/dashboard');
