@@ -1,6 +1,8 @@
+import DashboardClientWrapper from '@/components/dashboard/DashboardClientWrapper';
+
 export default function DashboardPage() {
   return (
-    <>
+    <DashboardClientWrapper>
       <p className="mb-4 text-lg text-foreground">
         Welcome to your dashboard.
       </p>
@@ -16,6 +18,6 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
-    </>
+    </DashboardClientWrapper>
   );
 }
