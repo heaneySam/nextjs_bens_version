@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import ConfirmClient from '@/components/ConfirmClient';
+import ConfirmClient from '@/components/login/ConfirmClient';
 
 export default function ConfirmPage() {
   return (

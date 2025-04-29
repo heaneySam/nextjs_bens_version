@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { auth } from './auth';
 import LoginForm from '@/components/login/LoginForm';
 import ToasterProvider from '@/components/providers/ToasterProvider';
-import LoggedInBanner from '@/components/LoggedInBanner';
+import LoggedInBanner from '@/components/login/LoggedInBanner';
 import Link from 'next/link';
 
 export default async function Home() {

@@ -66,6 +66,12 @@ export default function ConfirmClient() {
     confirmLogin();
   }, [token, router]);
 
+  useEffect(() => {
+    if (status === 'success') {
+      router.replace('/dashboard')
+    }
+  }, [status, router])
+
   if (status === 'loading') {
     return <p className="p-8 text-center">Confirming your login...</p>;
   }
