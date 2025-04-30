@@ -34,14 +34,26 @@ export async function GET(request: NextRequest) {
   // Prepare a redirect response
   const response = NextResponse.redirect(new URL(nextPath, request.url));
 
-  // Set the renewed access token as HttpOnly cookie
-  response.cookies.set('access_token', newAccessToken, {
+  // Set the renewed access token as HttpOnly cookie on the front-end domain
+  const secureCookie = process.env.NODE_ENV === 'production';
+  // Strongly typed cookie options
+  const cookieOptions: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'none';
+    path: string;
+    domain?: string;
+  } = {
     httpOnly: true,
-    // In production, use secure cookies with SameSite=None; in development, use lax, non-secure cookies
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: secureCookie,
+    sameSite: 'none',
     path: '/',
-  });
+  };
+  const cookieDomain = process.env.FRONTEND_COOKIE_DOMAIN;
+  if (cookieDomain) {
+    cookieOptions.domain = cookieDomain;
+  }
+  response.cookies.set('access_token', newAccessToken, cookieOptions);
 
   return response;
 } 

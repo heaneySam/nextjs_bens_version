@@ -1,26 +1,43 @@
 export type AuthResponse = { user: { id: string; email: string } | null };
 
-// Server-side: forward incoming cookie header for SSR
-import { cookies } from 'next/headers';
+// Server-side authentication function
+import { cookies, headers } from 'next/headers';
 
 export async function auth(): Promise<AuthResponse> {
-  // Forward 'cookie' header from incoming request
-  const cookieStore = await cookies();
-  // Build Cookie header manually to avoid dynamic toString()
-  const allCookies = cookieStore.getAll();
-  const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
-  // Debug: log the cookie header being forwarded for authentication
-  console.debug('auth() - forwarded cookie header:', cookieHeader);
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/auth/session/`,
-    { cache: 'no-store', headers: { cookie: cookieHeader } }
-  );
-  if (!res.ok) {
+  try {
+    // Use the correct async pattern for cookies as per Next.js 15
+    const cookieStore = await cookies();
+    
+    // Get all cookies and convert to cookie header string
+    // Note: No need for typecasting as we're using the correct API
+    const cookieHeader = cookieStore.getAll()
+      .map((cookie: { name: string; value: string })   => `${cookie.name}=${cookie.value}`)
+      .join('; ');
+    
+    // Call your API route: build absolute URL for internal API
+    const requestHeaders = await headers();
+    const host = requestHeaders.get('host');
+    const proto = requestHeaders.get('x-forwarded-proto') ?? 'http';
+    const sessionUrl = `${proto}://${host}/api/auth/session/`;
+    const response = await fetch(sessionUrl, {
+      headers: {
+        Cookie: cookieHeader,
+      },
+      cache: 'no-store', // Important: Disable caching
+    });
+    
+    if (!response.ok) {
+      return { user: null };
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Auth error:', error);
     return { user: null };
   }
-  const data = (await res.json()) as AuthResponse;
-  return data;
 }
+
+
 
 /**
  * Request a magic link for login. Triggers the backend to send a magic link to the user's email.
@@ -28,7 +45,7 @@ export async function auth(): Promise<AuthResponse> {
  * @returns The backend response (usually a detail message)
  */
 export async function login(email: string): Promise<{ detail: string }> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/code/request/`, {
+  const res = await fetch('/api/auth/code/request/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -42,7 +59,7 @@ export async function login(email: string): Promise<{ detail: string }> {
  * @returns void
  */
 export async function logout(): Promise<void> {
-  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
+  await fetch('/api/auth/logout/', {
     method: 'POST',
     credentials: 'include',
   });
@@ -53,8 +70,8 @@ export async function logout(): Promise<void> {
  * @returns void
  */
 export async function refreshToken(): Promise<void> {
-  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`, {
-    method: 'POST',
+  // Trigger silent refresh via Next.js proxy (GET)
+  await fetch('/api/auth/token/refresh/', {
     credentials: 'include',
   });
 } 
