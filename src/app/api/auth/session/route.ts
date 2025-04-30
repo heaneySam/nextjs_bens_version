@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
   const res = await fetch(`${BACKEND_URL}/api/auth/session/`, {
     method: 'GET',
     credentials: 'include',
+    headers: {
+      cookie: cookieHeader,
+    },
     cache: 'no-store',
   });
 
