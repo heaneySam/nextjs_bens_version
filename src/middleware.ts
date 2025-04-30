@@ -20,6 +20,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
       }
     } catch (e) {
+      console.warn('Failed to decode JWT payload in middleware:', e);
       // If decode fails, treat as expired
     }
   }

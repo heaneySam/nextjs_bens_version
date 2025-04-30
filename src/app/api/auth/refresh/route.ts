@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'no-store';
+export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   // Backend endpoint for token refresh
