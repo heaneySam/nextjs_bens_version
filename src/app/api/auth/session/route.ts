@@ -1,6 +1,5 @@
 // app/api/auth/session/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.BACKEND_URL!;
 
