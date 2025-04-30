@@ -20,8 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function verifySession() {
       try {
-        const sessionUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/session/`;
-        const refreshUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`;
+        const sessionUrl = '/api/auth/session';
+        const refreshUrl = '/api/auth/token/refresh';
         // Initial session check
         let res = await fetch(sessionUrl, { cache: 'no-store', credentials: 'include' });
         let data: AuthResponse | null = null;

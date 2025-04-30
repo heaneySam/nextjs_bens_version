@@ -1,7 +1,9 @@
 export type AuthResponse = { user: { id: string; email: string } | null };
 
 // Server-side authentication function
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
+// Backend base URL (configure via env var)
+const BACKEND_URL = process.env.BACKEND_URL!;
 
 export async function auth(): Promise<AuthResponse> {
   try {
@@ -14,11 +16,8 @@ export async function auth(): Promise<AuthResponse> {
       .map((cookie: { name: string; value: string })   => `${cookie.name}=${cookie.value}`)
       .join('; ');
     
-    // Call your API route: build absolute URL for internal API
-    const requestHeaders = await headers();
-    const host = requestHeaders.get('host');
-    const proto = requestHeaders.get('x-forwarded-proto') ?? 'http';
-    const sessionUrl = `${proto}://${host}/api/auth/session/`;
+    // Call your API route on the Django backend
+    const sessionUrl = `${BACKEND_URL}/api/auth/session/`;
     const response = await fetch(sessionUrl, {
       headers: {
         Cookie: cookieHeader,
@@ -45,7 +44,7 @@ export async function auth(): Promise<AuthResponse> {
  * @returns The backend response (usually a detail message)
  */
 export async function login(email: string): Promise<{ detail: string }> {
-  const res = await fetch('/api/auth/code/request/', {
+  const res = await fetch(`${BACKEND_URL}/api/auth/code/request/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -59,7 +58,7 @@ export async function login(email: string): Promise<{ detail: string }> {
  * @returns void
  */
 export async function logout(): Promise<void> {
-  await fetch('/api/auth/logout/', {
+  await fetch(`${BACKEND_URL}/api/auth/logout/`, {
     method: 'POST',
     credentials: 'include',
   });
@@ -70,8 +69,8 @@ export async function logout(): Promise<void> {
  * @returns void
  */
 export async function refreshToken(): Promise<void> {
-  // Trigger silent refresh via Next.js proxy (GET)
-  await fetch('/api/auth/token/refresh/', {
+  // Trigger silent refresh on the Django backend (GET)
+  await fetch(`${BACKEND_URL}/api/auth/token/refresh/`, {
     credentials: 'include',
   });
 } 

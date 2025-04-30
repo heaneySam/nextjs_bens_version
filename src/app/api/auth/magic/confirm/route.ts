@@ -1,56 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const BACKEND_URL = process.env.BACKEND_URL!;
+
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  const token = url.searchParams.get('token');
-  const nextPath = url.searchParams.get('next') || '/';
+  // Extract token from query
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token');
   if (!token) {
-    console.warn('[magic confirm proxy] missing token');
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.json({ error: 'Token missing' }, { status: 400 });
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const confirmEndpoint = `${apiUrl}/api/auth/magic/confirm/?token=${encodeURIComponent(token)}`;
-  console.log('[magic confirm proxy] forwarding token to:', confirmEndpoint);
-
-  const res = await fetch(confirmEndpoint, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
+  // Call backend confirm endpoint for JSON response
+  const res = await fetch(`${BACKEND_URL}/api/auth/magic/confirm/?token=${token}`, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
   });
-
+  const tokenData = await res.json();
   if (!res.ok) {
-    console.warn('[magic confirm proxy] backend confirm failed with status', res.status);
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.json(tokenData, { status: res.status });
   }
 
-  const { access_token, refresh_token } = await res.json();
-
-  // Set cookies and redirect
-  const response = NextResponse.redirect(new URL(nextPath, request.url));
-  const secureCookie = process.env.NODE_ENV === 'production';
-  // Strongly typed cookie options
-  const cookieOptions: {
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: 'none';
-    path: string;
-    domain?: string;
-  } = {
+  // Set HttpOnly cookies on frontend domain
+  const nextRes = NextResponse.redirect(new URL('/', request.url));
+  nextRes.cookies.set('access_token', tokenData.access_token, {
     httpOnly: true,
-    secure: secureCookie,
+    secure: true,
     sameSite: 'none',
     path: '/',
-  };
-  const cookieDomain = process.env.FRONTEND_COOKIE_DOMAIN;
-  if (cookieDomain) {
-    cookieOptions.domain = cookieDomain;
-  }
+  });
+  nextRes.cookies.set('refresh_token', tokenData.refresh_token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  });
 
-  response.cookies.set('access_token', access_token, cookieOptions);
-  response.cookies.set('refresh_token', refresh_token, cookieOptions);
-
-  return response;
+  return nextRes;
 }
