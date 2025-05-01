@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
   const cookieHeader = request.headers.get('cookie') || '';
   const res = await fetch(`${BACKEND_URL}/api/auth/session/`, {
     method: 'GET',
-    credentials: 'include',
     headers: {
-      cookie: cookieHeader,
+      'Accept': 'application/json',
+      'Cookie': cookieHeader,
     },
     cache: 'no-store',
   });
