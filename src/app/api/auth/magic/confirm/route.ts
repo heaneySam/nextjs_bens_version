@@ -29,12 +29,14 @@ export async function GET(request: NextRequest) {
     secure: true,
     sameSite: 'none',
     path: '/',
+    domain: process.env.FRONTEND_COOKIE_DOMAIN,
   });
   nextRes.cookies.set('refresh_token', tokenData.refresh_token, {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
     path: '/',
+    domain: process.env.FRONTEND_COOKIE_DOMAIN,
   });
 
   return nextRes;
