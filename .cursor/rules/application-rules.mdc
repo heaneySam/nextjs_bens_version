@@ -1,0 +1,172 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Cursor Rules for Next.js 15 + React 19
+
+This document defines coding patterns and best practices for our Next.js 15 and React 19 application, ensuring consistent conventions, robust proxying, and optimized performance across all routes and components.
+
+---
+
+### 1. File Metadata & Globs
+
+- **Description:** "Cursor rules for Next.js 15 + React 19 frontend proxying and coding conventions"
+- **Globs:**
+  ```yaml
+  globs:
+    - "app/api/**/*.ts"
+    - "app/**/*.{js,jsx,ts,tsx}"
+    - "middleware.ts"
+    - "next.config.{js,ts}"
+  ```
+  > **Tip:** Include any additional directories (e.g., `lib/**`, `components/**`) if you place Route Handlers or Server Actions there to avoid missing rules.
+
+- **alwaysApply:** `true`
+
+---
+
+### 2. Frontend Proxy Pattern
+
+- **Cookie Forwarding:** In every `app/api/**/route.ts`, extract the `cookie` header and forward it to `process.env.BACKEND_URL` using:
+  ```js
+  const { cookies } = headers();
+  const cookieHeader = cookies.get('cookie');
+  const res = await fetch(`${process.env.BACKEND_URL}${path}`, {
+    headers: { cookie: cookieHeader },
+    cache: 'no-store'
+  });
+  ```
+- **Set-Cookie Mirroring:** Mirror any `Set-Cookie` headers back to the client:
+  ```js
+  const nextRes = NextResponse.next();
+  res.headers.getSetCookie()?.forEach((c) => nextRes.cookies.set(c));
+  return nextRes;
+  ```
+- **Caching Directive:** At the top of auth routes, disable ISR and caching:
+  ```js
+  export const dynamic = 'force-dynamic';
+  ```
+- **Edge Runtime (Optional):** To leverage Vercel’s Edge Runtime, add:
+  ```js
+  export const runtime = 'edge';
+  ```
+
+---
+
+### 3. Dynamic Routing & Params
+
+- **Async Params:** Always destructure async `params`:
+  ```js
+  export default async function Page({ params, searchParams }) {
+    const { slug } = await params;
+    // ...
+  }
+  ```
+- **Static Params for SSG:** Implement:
+  ```js
+  export async function generateStaticParams() {
+    return [
+      { slug: 'example-1' },
+      { slug: 'example-2' }
+    ];
+  }
+  ```
+  > For ISR-only routes, you can skip this and rely on `revalidatePath` / `revalidateTag`.
+
+---
+
+### 4. Server Actions & Data Fetching
+
+- **`use server` Directive:** Place at the very top of each Server Action file:
+  ```js
+  "use server";
+  export async function myAction(data) { /* ... */ }
+  ```
+- **Form Handling:** Use HTML forms with Server Actions:
+  ```jsx
+  <form action={myAction}>
+    {/* inputs */}
+    <button type="submit">Submit</button>
+  </form>
+  ```
+  Manage state with `useActionState` and `useFormStatus` in Client Components.
+
+- **Top-Level Fetch:** In Server Components, do:
+  ```js
+  const data = await fetch(url);
+  ```
+  to leverage automatic memoization within a render pass.
+
+- **Caching Control:** Opt into static or dynamic:
+  ```js
+  export const dynamic = 'force-static';
+  // or
+  export const dynamic = 'force-dynamic';
+  ```
+  Use `revalidatePath` / `revalidateTag` for ISR as needed.
+
+---
+
+### 5. Middleware & Security
+
+- **JWT Validation:** In `middleware.ts`:
+  ```js
+  import { NextResponse } from 'next/server';
+  import { cookies } from 'next/headers';
+
+  export async function middleware(request) {
+    const { access_token } = await cookies();
+    const payload = decodeJwt(access_token);
+    if (!payload || payload.exp * 1000 < Date.now()) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/api/auth/refresh';
+      url.searchParams.set('next', request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+  ```
+- **Runtime Environment:** If using Edge:
+  ```js
+  export const runtime = 'edge';
+  ```
+
+---
+
+### 6. Naming Conventions & Linting
+
+- **Frontend (React):** Use **camelCase** for props, variables, and functions.
+- **Backend (Django):** Use **snake_case** for models, serializers, and database fields.
+- **Automation:** Enforce via ESLint’s `@typescript-eslint/naming-convention` rule and Prettier plugins.
+
+---
+
+### 7. React Coding Conventions
+
+- **Client Hooks:** In `"use client"` components, use React 19 hooks at top level:
+  ```js
+  useTransition();
+  useActionState();
+  useFormStatus();
+  useOptimistic();
+  ```
+- **Avoid Inline Promises:** Define data-fetching functions outside render and resolve with `use(...)` or `await` at the top.
+- **Documentation:** Add inline comments for non-obvious patterns—async params, caching trade-offs, etc.
+
+---
+
+## Final Recommendations
+
+1. **Versioning:** Add metadata:
+   ```yaml
+   nextVersion: '15'
+   reactVersion: '19'
+   ```
+2. **CI Integration:** Run Cursor rules in GitHub Actions or pre-commit hooks to fail on violations.
+3. **Code Samples:** Embed brief example snippets under each rule to illustrate correct usage.
+
+---
+
+_By adhering to these rules, your Next.js 15 + React 19 codebase will maintain consistency, security, and optimal performance across all routes and components._
+

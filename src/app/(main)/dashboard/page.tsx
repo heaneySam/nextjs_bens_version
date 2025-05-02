@@ -1,8 +1,10 @@
 // import DashboardClientWrapper from '@/components/dashboard/DashboardClientWrapper';
+import CreateRiskForm from '@/components/CreateRiskForm';
 
 export default function DashboardPage() {
   return (
     <>
+      <CreateRiskForm />
       <p className="mb-4 text-lg text-foreground">
         Welcome to your dashboard.
       </p>
