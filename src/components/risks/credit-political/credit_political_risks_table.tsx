@@ -268,6 +268,7 @@ export default function CreditPoliticalRiskTable() {
                     onCheckedChange={(value) =>
                       column.toggleVisibility(!!value)
                     }
+                    onSelect={(e) => e.preventDefault()}
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>

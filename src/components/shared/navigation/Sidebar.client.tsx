@@ -85,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       <aside
         className={cn(
-          'fixed top-16 bottom-0 left-0 z-20 flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out md:sticky md:top-16 h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)]',
+          'fixed top-16 bottom-0 left-0 z-20 flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out md:sticky md:top-16',
           isOpen ? 'translate-x-0' : '-translate-x-full',
           'md:translate-x-0'
         )}
