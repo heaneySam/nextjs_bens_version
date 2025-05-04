@@ -2,25 +2,24 @@
 export const dynamic = 'force-dynamic';
 
 import { ReactNode } from 'react';
+// import { cookies } from 'next/headers'; // No longer needed here
 // Remove redirect import, no longer needed here
 // import { redirect } from 'next/navigation';
 import { auth } from '../auth';
 import MainLayoutClient from './MainLayoutClient.client';
+// import { RiskClass } from '@/types/risk'; // No longer needed here
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
+
 export default async function MainLayout({ children }: MainLayoutProps) {
-  // Still fetch user info if possible for initial header render, but don't block/redirect
-  const { user } = await auth(); 
-  
-  // Remove the blocking redirect
-  // if (!user) {
-  //   redirect('/');
-  // }
+  // Fetch only user
+  const { user } = await auth();
 
   return (
+    // Remove riskClasses prop
     <MainLayoutClient user={{ email: user?.email ?? '' }}>
       {children}
     </MainLayoutClient>
