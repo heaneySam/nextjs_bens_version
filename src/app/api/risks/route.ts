@@ -28,4 +28,18 @@ export async function POST(request: Request) {
   // Return proxied JSON response
   const data = await backendRes.json();
   return NextResponse.json(data, { status: backendRes.status });
+}
+
+export async function GET(request: Request) {
+  // Extract incoming cookies and forward any query parameters
+  const incoming = await headers();
+  const cookie = incoming.get('cookie') || '';
+  const url = new URL(request.url);
+  const backendUrl = `${process.env.BACKEND_URL}/api/risks${url.search}`;
+  const backendRes = await fetch(backendUrl, {
+    headers: { cookie },
+    cache: 'no-store',
+  });
+  const data = await backendRes.json();
+  return NextResponse.json(data, { status: backendRes.status });
 } 

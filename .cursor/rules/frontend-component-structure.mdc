@@ -1,0 +1,120 @@
+---
+description: 
+globs: frontend,nextjs,react,components,naming,conventions
+alwaysApply: false
+---
+Here’s a suggested nomenclature guide that’s aligned with Next.js 15 + React 19 best practices, makes clear at a glance what each component does and where it lives, and helps enforce a predictable project structure.
+
+---
+
+# 1. File & Directory Layout
+
+1. **Directories = features or domains**  
+   └─ e.g.  
+   └─ /src/components/auth/  
+   └─ /src/components/dashboard/  
+
+2. **Files = single component (or very closely related pair)**  
+   └─ Match the component’s PascalCase name, plus a suffix for its “type”  
+
+3. **File casing**  
+   • Directories: kebab-case or snake_case (auth/, login/)  
+   • Files: PascalCase with a .client.tsx or .server.tsx extension  
+
+   Example:  
+   
+src/
+   ├── components/
+   │   └── auth/
+   │       ├── LoginForm.client.tsx
+   │       ├── LoginContainer.client.tsx
+   │       └── ConfirmMagicLink.client.tsx
+   └── app/
+       ├── page.tsx               ← server “home” page
+       └── dashboard/
+           ├── page.tsx           ← server “dashboard” page
+           ├── layout.tsx         ← server layout
+           └── ErrorBoundary.client.tsx
+
+
+---
+
+# 2. File Extensions & “Type” Suffix
+
+• **.server.tsx**  
+  - **Default** for any component that runs purely on the server (no client hooks).  
+  - Omit if you never import client-only APIs like useState.  
+
+• **.client.tsx**  
+  - Must start with "use client" at top.  
+  - For any interactive component that uses React 19 hooks (useState, useTransition, useActionState, useOptimistic, use) or browser APIs.  
+
+---
+
+# 3. Component Naming Patterns
+
+1. **Pages & Layouts**  
+   • Pages in App Router must be export default async function Page(...) in a file named page.tsx.  
+   • Layouts in layout.tsx likewise.  
+   • You can prepend domain/type in comments but don’t rename the file.  
+     
+tsx
+     // app/page.tsx
+     export default async function Page() { … }
+
+     // app/dashboard/layout.tsx
+     export default function Layout({ children }) { … }
+
+
+2. **Containers vs Presentational**  
+   • **Container** components orchestrate data loading, context, side-effects, session checks, etc.  
+     - Suffix with Container or Wrapper.  
+     - Always .client.tsx if using hooks.  
+     - Example: LoginContainer.client.tsx (calls your API, holds loading state, redirects).  
+
+   • **Presentational** components purely render props, styling, and children.  
+     - No side-effects or data-fetch inside.  
+     - Example: LoginForm.client.tsx (email input, submit button, message).  
+
+3. **Server‐only Components**  
+   • If you have a “dumb” component that runs on the server—e.g. renders markdown into HTML at build time—name it Something.server.tsx (or omit the suffix if you prefer).  
+
+4. **Specialized Roles**  
+   • **Providers**: suffix with Provider (ToasterProvider.client.tsx, AuthProvider.client.tsx).  
+   • **Hooks**: start with use (e.g. useAuth.ts, useMagicLink.ts).  
+   • **HOCs**: prefix with with (e.g. withAuthGuard.client.tsx).  
+
+5. **Magic‐Link Flow Example**  
+   
+src/components/auth/
+   ├── LoginContainer.client.tsx    ← Client wrapper: checks session, shows form  
+   ├── LoginForm.client.tsx         ← Pure form UI, calls login() helper  
+   ├── ConfirmMagicLink.client.tsx  ← Reads token from URL, confirms login  
+   ├── SubmitButton.client.tsx      ← Reusable button with loading state  
+   └── useLogin.ts                  ← Hook / helper for login API calls
+
+
+---
+
+# 4. Naming Conventions Summary
+
+| Category         | File Suffix        | Component Name Pattern     | Runs On     |
+|------------------|--------------------|----------------------------|-------------|
+| Page (App Router)| page.tsx         | export default function Page | Server      |
+| Layout           | layout.tsx       | export default function Layout | Server      |
+| Server UI        | .server.tsx      | Something                | Server      |
+| Client UI        | .client.tsx      | Something                | Client      |
+| Containers       | .client.tsx      | SomethingContainer / Wrapper | Client      |
+| Form/UI Widget   | .client.tsx      | LoginForm / SubmitButton | Client      |
+| Providers        | .client.tsx      | AuthProvider / ToasterProvider | Client      |
+| Hooks / Helpers  | .ts              | useAuth, fetchSession  | Any (mostly server) |
+
+---
+
+# 5. Why This Helps
+
+- **Automatic clustering**: your editor/file tree immediately shows which pieces are client-side vs server-side.  
+- **Predictability**: any component ending in Container is where your hooks and effects live.  
+- **Alignment with Next.js**: respects page.tsx / layout.tsx conventions, plus explicit .client.tsx for interactive code.  
+
+- **Scalability**: as your app grows, it’s trivial to spot the role of each file and enforce lint/CI rules around it.

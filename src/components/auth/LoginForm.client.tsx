@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import SubmitButton from '@/components/login/SubmitButton';
+import SubmitButton from '@/components/auth/LoginSubmitButton.client';
 import { login } from '@/app/auth-client';
 
 export default function LoginForm() {

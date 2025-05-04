@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LoginForm from '@/components/login/LoginForm';
+import LoginForm from '@/components/auth/LoginForm.client';
 import ToasterProvider from '@/components/providers/ToasterProvider';
 import Image from 'next/image';
 import { type AuthResponse } from '@/app/auth'; // Assuming you export this type
