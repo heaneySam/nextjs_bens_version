@@ -1,78 +1,136 @@
-// src/app/api/risks/[riskClass]/route.ts
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 
+// Disable caching and force dynamic rendering for authentication routes
 export const dynamic = 'force-dynamic';
 
-async function proxy(request: Request, riskClass: string) {
-  const incoming = await headers();
-  const cookie = incoming.get('cookie') || '';
-  const url = new URL(request.url);
-  // forward path and query string, always ensure a trailing slash after the class
-  // strip the matched segment (and optional slash)
-  const suffix = url.pathname.replace(/^\/api\/risks\/[^/]+\/?/, '');
-  // if no suffix, default to a single slash
-  const normalizedSuffix = suffix || '/';
-  const backendUrl = `${process.env.BACKEND_URL}/api/risks/${riskClass}${normalizedSuffix}${url.search}`;
+// Ensure BACKEND_URL is set in your environment variables
+const BACKEND_URL = process.env.BACKEND_URL;
 
-  const init: RequestInit = {
-    method: request.method,
-    headers: {
-      'Content-Type': request.headers.get('Content-Type') || 'application/json',
-      cookie,
-    },
-    // only forward a body if it's not GET/HEAD
-    body: request.method !== 'GET' && request.method !== 'HEAD'
-      ? await request.text()
-      : null,
-    cache: 'no-store',
-  };
-
-  const backendRes = await fetch(backendUrl, init);
-  const responseData = await backendRes.arrayBuffer();
-  const responseHeaders = new Headers(backendRes.headers);
-  return new NextResponse(responseData, {
-    status: backendRes.status,
-    headers: responseHeaders,
-  });
+// Define the expected shape of the params
+interface RouteParams {
+    params: { riskClass: string };
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ riskClass: string }> }
-) {
-  const { riskClass } = await params;
-  return proxy(request, riskClass);
+/**
+ * GET handler to fetch risks for a specific class from the backend.
+ * Dynamically constructs the backend URL based on riskClass param.
+ * Forwards cookies and mirrors Set-Cookie headers.
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<RouteParams['params']> }) {
+    const { riskClass } = await params;
+
+    if (!BACKEND_URL) {
+        return NextResponse.json({ error: 'Backend URL not configured' }, { status: 500 });
+    }
+    if (!riskClass) {
+        return NextResponse.json({ error: 'Risk class parameter is missing' }, { status: 400 });
+    }
+
+    const headersList = await headers();
+    const cookieHeader = headersList.get('cookie');
+
+    // Construct target URL dynamically
+    const targetUrl = `${BACKEND_URL}/api/risks/${riskClass}/`;
+    console.log(`Proxying GET request to: ${targetUrl}`); // Optional: server-side logging
+
+    try {
+        const apiRes = await fetch(targetUrl, {
+            method: 'GET',
+            headers: {
+                ...(cookieHeader && { cookie: cookieHeader }),
+            },
+            cache: 'no-store',
+        });
+
+        if (!apiRes.ok) {
+            const errorData = await apiRes.text();
+            console.error(`Backend API error at ${targetUrl}: ${apiRes.status} ${apiRes.statusText}`, errorData);
+            return NextResponse.json(
+                { error: `Backend request failed: ${apiRes.statusText}`, details: errorData },
+                { status: apiRes.status }
+            );
+        }
+
+        const data = await apiRes.json();
+        const response = NextResponse.json(data);
+
+        const setCookieHeaders = apiRes.headers.getSetCookie();
+        if (setCookieHeaders) {
+             setCookieHeaders.forEach((cookie) => {
+                 try {
+                    response.headers.append('Set-Cookie', cookie);
+                 } catch (e) {
+                    console.error("Error parsing or setting cookie:", cookie, e);
+                 }
+             });
+        }
+
+        return response;
+
+    } catch (error) {
+        console.error(`Error fetching from backend API at ${targetUrl}:`, error);
+        return NextResponse.json({ error: `Internal Server Error fetching data from ${riskClass} backend` }, { status: 500 });
+    }
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ riskClass: string }> }
-) {
-  const { riskClass } = await params;
-  return proxy(request, riskClass);
-}
+/**
+ * POST handler to create a new risk for a specific class via the backend.
+ * Dynamically constructs the backend URL based on riskClass param.
+ * Forwards the request body and cookies, mirrors Set-Cookie headers.
+ */
+export async function POST(request: NextRequest, { params }: { params: Promise<RouteParams['params']> }) {
+    const { riskClass } = await params;
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ riskClass: string }> }
-) {
-  const { riskClass } = await params;
-  return proxy(request, riskClass);
-}
+    if (!BACKEND_URL) {
+        return NextResponse.json({ error: 'Backend URL not configured' }, { status: 500 });
+    }
+    if (!riskClass) {
+        return NextResponse.json({ error: 'Risk class parameter is missing' }, { status: 400 });
+    }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ riskClass: string }> }
-) {
-  const { riskClass } = await params;
-  return proxy(request, riskClass);
-}
+    const headersList = await headers();
+    const cookieHeader = headersList.get('cookie');
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ riskClass: string }> }
-) {
-  const { riskClass } = await params;
-  return proxy(request, riskClass);
+    // Construct target URL dynamically
+    const targetUrl = `${BACKEND_URL}/api/risks/${riskClass}/`;
+    console.log(`Proxying POST request to: ${targetUrl}`); // Optional: server-side logging
+
+    try {
+        const body = await request.json();
+
+        const apiRes = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(cookieHeader && { cookie: cookieHeader }),
+            },
+            body: JSON.stringify(body),
+            cache: 'no-store',
+        });
+
+        // Process the backend response before creating the Next response
+        const responseData = await apiRes.json();
+        const response = NextResponse.json(responseData, { status: apiRes.status });
+
+        const setCookieHeaders = apiRes.headers.getSetCookie();
+        if (setCookieHeaders) {
+            setCookieHeaders.forEach((cookie) => {
+                try {
+                    response.headers.append('Set-Cookie', cookie);
+                } catch (e) {
+                    console.error("Error parsing or setting cookie:", cookie, e);
+                }
+            });
+        }
+
+        return response;
+
+    } catch (error: unknown) {
+        console.error(`Error in POST request to backend API at ${targetUrl}:`, error);
+        if (error instanceof SyntaxError) {
+            return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+        }
+        return NextResponse.json({ error: `Internal Server Error during POST request for ${riskClass}` }, { status: 500 });
+    }
 }

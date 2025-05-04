@@ -1,24 +1,26 @@
 import React from 'react';
 // Import the specific table component, adjusting the name
 import CreditPoliticalRiskTable from './credit_political_risks_table'; 
+import type { CreditRiskEntry } from './credit_political_risks_table';
 
 // TODO: Import other components specific to Credit & Political Risk later
 // import SummaryCards from './SummaryCards';
 // import RiskCharts from './RiskCharts';
 
-// Props might be needed later if data is fetched in page.tsx and passed down
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// Define the props this component receives
 interface RiskDashboardContentProps {
-  // fetchedData?: any; // Example: Pass data fetched at the page level
+  fetchedData: CreditRiskEntry[]; // Use the imported type
+  riskClass: string; // Add riskClass prop here
 }
 
-export default function RiskDashboardContent({ /* fetchedData */ }: RiskDashboardContentProps) {
+// Accept fetchedData and riskClass in the function signature
+export default function RiskDashboardContent({ fetchedData, riskClass }: RiskDashboardContentProps) {
   // This component arranges the specific UI parts for Credit & Political Risk
   return (
     <div className="space-y-6">
       {/* Render the specific data table */}
-      {/* TODO: Pass fetchedData to the table if needed */} 
-      <CreditPoliticalRiskTable />
+      {/* Pass the received fetchedData and riskClass props to the table */}
+      <CreditPoliticalRiskTable fetchedData={fetchedData} riskClass={riskClass} />
 
       {/* TODO: Render other components like charts, summaries, etc. */}
       {/* <SummaryCards data={fetchedData?.summary} /> */}

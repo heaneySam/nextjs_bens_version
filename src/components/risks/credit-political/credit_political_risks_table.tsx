@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ColumnDef,
   flexRender,
@@ -38,44 +40,51 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { createCreditPoliticalRisk } from '@/app/(main)/risks/credit-political/actions';
+import { toast } from "sonner";
 
-// Define the shape of our data
-// TODO: Refine based on actual backend data model
-type CreditRiskEntry = {
-  id: number;
-  insured: string;
-  counterparty: string;
-  product: 'Trade Credit' | 'Trade Finance' | 'Project Finance';
-  country: string; // Store country name, maybe add code for flag later
-  countryCode?: string; // Optional: for flag lookup
-  creationDate: string; // Use string for now, format later
-  inceptionDate: string;
-  expiryDate: string;
-  status: 'Processing' | 'Bound' | 'Approving' | 'New Deal' | 'Approved'; // Add 'Approved' from image
+// Sync this with the backend model/serializer
+// --- Export the type --- 
+export type CreditRiskEntry = {
+  id: string; // UUIDs are strings
+  name?: string;
+  description?: string;
+  insured?: string;
+  country_of_insured?: string;
+  counterparty?: string;
+  country_of_counterparty?: string;
+  product?: string; // Consider using the choice values: 'trade_credit', etc.
+  country_of_risk?: string;
+  creation_date?: string | null; // Backend uses DateField (nullable)
+  inception_date?: string | null;
+  expiry_date?: string | null;
+  status?: string; // Consider using choice values: 'processing', etc.
+  score?: number | null;
+  // Add other fields from RiskBase if needed (e.g., created_at, updated_at)
+  created_at?: string;
+  updated_at?: string;
+  // unstructured_data is likely not displayed directly in the table
 };
 
+// --- Define props for the table component ---
+interface CreditPoliticalRiskTableProps {
+  fetchedData: CreditRiskEntry[];
+  riskClass: string;
+}
+// -----------------------------------------
+
 // Placeholder Data (Matches image structure)
+// --- REMOVE or COMMENT OUT Placeholder Data ---
+/*
 const placeholderData: CreditRiskEntry[] = [
-  { id: 91, insured: 'Bank Inc.', counterparty: 'All Trade Inc.', product: 'Trade Credit', country: 'Australia', creationDate: '05/02/2025', inceptionDate: '01/01/2025', expiryDate: '01/01/2030', status: 'Processing' },
-  { id: 92, insured: 'Lets Go Banking', counterparty: 'All Trade Inc.', product: 'Trade Finance', country: 'Philippines', creationDate: '12/02/2025', inceptionDate: '01/10/2024', expiryDate: '30/09/2028', status: 'Bound' },
-  { id: 95, insured: 'Lets Go Banking', counterparty: 'Tall Trade Limited', product: 'Trade Credit', country: 'Chile', creationDate: '06/02/2025', inceptionDate: '01/02/2025', expiryDate: '01/02/2030', status: 'Processing' },
-  { id: 72, insured: 'HSBC Holdings plc', counterparty: 'Apple Inc', product: 'Trade Credit', country: 'United States of America', creationDate: '23/08/2024', inceptionDate: '01/01/2025', expiryDate: '01/01/2030', status: 'Processing' }, // Corrected counterparty
-  { id: 89, insured: 'Cargill', counterparty: 'Claro Company', product: 'Trade Credit', country: 'Argentina', creationDate: '03/02/2025', inceptionDate: '03/02/2025', expiryDate: '03/02/2028', status: 'Approving' },
-  { id: 83, insured: 'Citigroup Inc.', counterparty: 'America Movil', product: 'Trade Finance', country: 'United States of America', creationDate: '24/01/2025', inceptionDate: '01/07/2025', expiryDate: '31/12/2026', status: 'Processing' },
-  { id: 69, insured: 'General Electric Company (GE)', counterparty: 'Coca-Cola Company', product: 'Trade Finance', country: 'United Kingdom', creationDate: '30/08/2024', inceptionDate: '01/02/2024', expiryDate: '01/02/2027', status: 'Bound' }, // Shortened UK
-  { id: 78, insured: 'Aon', counterparty: 'Amazon Inc', product: 'Trade Credit', country: 'Antarctica', creationDate: '23/10/2024', inceptionDate: '01/11/2024', expiryDate: '01/11/2026', status: 'Processing' },
-  { id: 80, insured: 'General Electric Company (GE)', counterparty: 'Coca-Cola Company', product: 'Trade Finance', country: 'United Kingdom', creationDate: '15/11/2024', inceptionDate: '01/02/2024', expiryDate: '01/02/2027', status: 'Processing' }, // Shortened UK
-  { id: 79, insured: '-', counterparty: '-', product: 'Project Finance', country: '-', creationDate: '15/11/2024', inceptionDate: '01/01/2026', expiryDate: '31/12/2027', status: 'New Deal' },
-  { id: 82, insured: '-', counterparty: '-', product: 'Trade Credit', country: '-', creationDate: '25/11/2024', inceptionDate: '01/01/2025', expiryDate: '01/01/2027', status: 'New Deal' },
-  { id: 66, insured: 'Lockheed Martin', counterparty: 'Government of Egypt', product: 'Trade Credit', country: 'Egypt', creationDate: '21/08/2024', inceptionDate: '01/05/2024', expiryDate: '01/05/2034', status: 'Processing' },
-  { id: 74, insured: '-', counterparty: '-', product: 'Trade Credit', country: '-', creationDate: '27/08/2024', inceptionDate: '01/01/2025', expiryDate: '01/01/2027', status: 'New Deal' },
-  { id: 75, insured: 'Apple Inc', counterparty: 'Aon', product: 'Trade Credit', country: 'United States of America', creationDate: '28/08/2024', inceptionDate: '01/01/2025', expiryDate: '01/01/2026', status: 'Processing' },
-  { id: 70, insured: 'General Electric Company (GE)', counterparty: 'Coca-Cola Company', product: 'Trade Finance', country: 'Brazil', creationDate: '22/08/2024', inceptionDate: '01/02/2024', expiryDate: '01/02/2027', status: 'Processing' },
-  { id: 76, insured: 'General Electric Company (GE)', counterparty: 'Coca-Cola Company', product: 'Trade Finance', country: 'Brazil', creationDate: '28/08/2024', inceptionDate: '01/02/2024', expiryDate: '01/02/2027', status: 'Processing' },
-  { id: 68, insured: 'Citigroup Inc.', counterparty: 'Claro Company', product: 'Project Finance', country: 'Argentina', creationDate: '21/08/2024', inceptionDate: '01/07/2024', expiryDate: '01/08/2029', status: 'Approved' },
+  { id: 91, insured: 'Bank Inc.', counterparty: 'All Trade Inc.', product: 'Trade Credit', country_of_risk: 'Australia', creation_date: '05/02/2025', inception_date: '01/01/2025', expiry_date: '01/01/2030', status: 'Processing' },
+  // ... other placeholder entries
 ];
+*/
+// -----------------------------------------
 
 // Define Columns - Simplified Headers
+// Update accessors to match the new CreditRiskEntry type fields
 export const columns: ColumnDef<CreditRiskEntry>[] = [
   {
     id: 'select',
@@ -108,73 +117,81 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
   {
     accessorKey: 'id',
     header: 'ID',
-    cell: ({ row }) => <div className="text-left font-medium">{row.getValue('id')}</div>,
+    // Display only a part of the UUID for brevity if desired
+    cell: ({ row }) => <div className="text-left font-medium truncate" title={row.getValue('id')}>{String(row.getValue('id')).substring(0, 8)}...</div>,
+    size: 100, // Adjust size for UUID
   },
   {
     accessorKey: 'insured',
     header: 'Insured',
-    cell: ({ row }) => <div className="text-left">{row.getValue('insured')}</div>,
+    cell: ({ row }) => <div className="text-left">{row.getValue('insured') || '-'}</div>, // Handle potentially empty strings
   },
   {
     accessorKey: 'counterparty',
     header: 'Counterparty',
-    cell: ({ row }) => <div className="text-left">{row.getValue('counterparty')}</div>,
+    cell: ({ row }) => <div className="text-left">{row.getValue('counterparty') || '-'}</div>, // Handle potentially empty strings
   },
   {
     accessorKey: 'product',
     header: 'Product',
-    cell: ({ row }) => <div className="text-left">{row.getValue('product')}</div>,
+    // Display the readable choice label if possible, or format the key
+    cell: ({ row }) => {
+        const productValue = row.getValue('product');
+        const displayValue = String(productValue || '-').replace('_', ' ');
+        return <div className="text-left capitalize">{displayValue}</div>;
+    },
   },
   {
-    accessorKey: 'country',
+    accessorKey: 'country_of_risk', // Changed from 'country'
     header: 'Country(s) of Risk',
     cell: ({ row }) => {
-      const country = row.original.country;
+      const country = row.original.country_of_risk;
       // TODO: Add flag lookup based on country or countryCode
       const flag = country === '-' ? '' : '🌍'; // Replace with actual flag component/emoji
       return <div className="flex items-center space-x-2">{flag} {country}</div>;
     },
   },
   {
-    accessorKey: 'creationDate',
+    accessorKey: 'creation_date', // Changed from 'creationDate'
     header: 'Creation Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('creationDate')}</div>, // TODO: Format date
+    cell: ({ row }) => <div className="text-left">{row.getValue('creation_date') || '-'}</div>, // TODO: Format date
   },
   {
-    accessorKey: 'inceptionDate',
+    accessorKey: 'inception_date', // Changed from 'inceptionDate'
     header: 'Inception Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('inceptionDate')}</div>, // TODO: Format date
+    cell: ({ row }) => <div className="text-left">{row.getValue('inception_date') || '-'}</div>, // TODO: Format date
   },
   {
-    accessorKey: 'expiryDate',
+    accessorKey: 'expiry_date', // Changed from 'expiryDate'
     header: 'Expiry Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('expiryDate')}</div>, // TODO: Format date
+    cell: ({ row }) => <div className="text-left">{row.getValue('expiry_date') || '-'}</div>, // TODO: Format date
   },
   {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
-      const status = row.original.status;
+      const statusValue = row.original.status;
       // Map status to existing badge variants
       let variant: React.ComponentProps<typeof Badge>['variant'] = "secondary";
-      switch (status) {
-        case 'Bound':
-        case 'Approved':
+      switch (statusValue) {
+        case 'bound': // Use backend choice keys
+        case 'approved':
            variant = 'default'; // Map success to default (often green)
            break;
-        case 'Approving':
+        case 'approving':
            variant = 'secondary'; // Map warning to secondary (adjust as needed)
            break;
-        case 'New Deal':
+        case 'new_deal':
            variant = 'outline'; // Keep outline
            break;
-        case 'Processing':
+        case 'processing':
         default:
            variant = 'secondary'; // Keep secondary
            break;
       }
       // Render badge with an appropriate existing variant
-      return <Badge variant={variant} className="capitalize">{status.toLowerCase()}</Badge>;
+      const displayStatus = String(statusValue || '-').replace('_', ' ');
+      return <Badge variant={variant} className="capitalize">{displayStatus}</Badge>; // Format status key
     },
   },
   {
@@ -191,7 +208,8 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(entry.id.toString())}>
+            {/* Ensure entry.id is treated as a string (UUID) */}
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(entry.id)}>
               Copy Entry ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -209,10 +227,26 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
   },
 ];
 
-export default function CreditPoliticalRiskTable() {
-  // TODO: Replace placeholderData with fetched data prop
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [data, setData] = React.useState(() => [...placeholderData]);
+// Update component to accept props
+export default function CreditPoliticalRiskTable({ fetchedData, riskClass }: CreditPoliticalRiskTableProps) {
+  // --- Debugging Logs ---
+  console.log('CreditPoliticalRiskTable received fetchedData:', fetchedData);
+  console.log('CreditPoliticalRiskTable received riskClass:', riskClass);
+  // --------------------
+
+  const router = useRouter();
+
+  // Use fetchedData instead of placeholderData
+  // Ensure fetchedData is available before initializing state
+  const data = React.useMemo(() => fetchedData || [], [fetchedData]);
+
+  // --- Debugging Logs ---
+  console.log('Data prepared for useReactTable:', data);
+  // --------------------
+
+  // Hook for managing pending state during server action
+  const [isPending, startTransition] = useTransition();
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
@@ -244,9 +278,48 @@ export default function CreditPoliticalRiskTable() {
     // TODO: Add pagination, filtering, row selection features later
   });
 
+  // Get rows model for logging effect dependency
+  const rowModel = table.getRowModel();
+
+  // --- Debugging Logs ---
+  React.useEffect(() => {
+    // Log rows once the table instance is stable
+    console.log('Table rows generated by useReactTable:', rowModel.rows);
+  }, [rowModel.rows, table]); // Add table as dependency, use rowModel.rows
+  // --------------------
+
+  const handleRowClick = (row: Row<CreditRiskEntry>) => {
+    const riskId = row.original.id;
+    // Construct the path using the riskClass prop and the row's ID
+    const path = `/risks/${riskClass}/${riskId}`;
+    console.log(`Navigating to: ${path}`);
+    router.push(path);
+  };
+
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between pt-4">
+        <Button
+          onClick={() => {
+            startTransition(async () => {
+              console.log("Create button clicked, starting transition...");
+              const result = await createCreditPoliticalRisk();
+              console.log("Server action finished:", result);
+              if (result.success) {
+                toast.success("New risk entry created successfully!");
+                // Data will refresh due to revalidatePath in the action
+              } else {
+                toast.error(`Failed to create risk: ${result.error}`, {
+                   description: result.details ? JSON.stringify(result.details) : undefined,
+                });
+              }
+            });
+          }}
+          disabled={isPending}
+        >
+          {isPending ? "Creating..." : "Create New Risk"}
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -270,7 +343,7 @@ export default function CreditPoliticalRiskTable() {
                     }
                     onSelect={(e) => e.preventDefault()}
                   >
-                    {column.id}
+                    {column.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </DropdownMenuCheckboxItem>
                 );
               })}
@@ -320,6 +393,7 @@ export default function CreditPoliticalRiskTable() {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
+                  onClick={() => handleRowClick(row)}
                 >
                   {row.getVisibleCells().map((cell: Cell<CreditRiskEntry, unknown>) => {
                     return (

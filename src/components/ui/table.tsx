@@ -128,8 +128,8 @@ TableFooter.displayName = "TableFooter";
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
   // Add data-state prop explicitly if needed, though usually handled by parent
-  React.HTMLAttributes<HTMLTableRowElement> & { 'data-state'?: string }
->(({ className, 'data-state': dataState, ...props }, ref) => {
+  React.HTMLAttributes<HTMLTableRowElement> & { 'data-state'?: string, onClick?: () => void }
+>(({ className, 'data-state': dataState, onClick, ...props }, ref) => {
   return (
     <tr
       ref={ref}
@@ -138,9 +138,11 @@ const TableRow = React.forwardRef<
       data-state={dataState}
       className={cn(
         "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        onClick && "cursor-pointer", // Add cursor-pointer if onClick is provided
         className
       )}
       {...props}
+      onClick={onClick} // Pass onClick handler
     />
   );
 });
