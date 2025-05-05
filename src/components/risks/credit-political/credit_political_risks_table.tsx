@@ -63,7 +63,10 @@ export type CreditRiskEntry = {
   // Add other fields from RiskBase if needed (e.g., created_at, updated_at)
   created_at?: string;
   updated_at?: string;
-  // unstructured_data is likely not displayed directly in the table
+  // Add new integration fields
+  source_system?: string | null;
+  source_record_id?: string | null;
+  unstructured_data?: Record<string, unknown> | null; // Or `any` if preferred
 };
 
 // --- Define props for the table component ---
@@ -195,6 +198,34 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
     },
   },
   {
+    accessorKey: 'source_system',
+    header: 'Source System',
+    cell: ({ row }) => <div className="text-left font-medium">{row.getValue('source_system') || '-'}</div>,
+    size: 120,
+  },
+  {
+    accessorKey: 'source_record_id',
+    header: 'Source ID',
+    // Display truncated like the main ID
+    cell: ({ row }) => {
+        const sourceId = row.getValue('source_record_id') as string | undefined | null;
+        const displayId = sourceId ? (sourceId.length > 15 ? `${sourceId.substring(0, 15)}...` : sourceId) : '-';
+        return <div className="text-left font-medium truncate" title={sourceId || ''}>{displayId}</div>;
+    },
+    size: 150,
+  },
+  {
+    accessorKey: 'unstructured_data',
+    header: 'Raw Data',
+    // Display a preview or indicator for JSON data
+    cell: ({ row }) => {
+        const rawData = row.getValue('unstructured_data');
+        const preview = rawData ? JSON.stringify(rawData).substring(0, 50) + '...' : '-'; // Show first 50 chars
+        return <div className="text-left font-mono text-xs truncate" title={rawData ? JSON.stringify(rawData, null, 2) : ''}>{preview}</div>;
+    },
+    size: 200, // Allow more space for the preview
+  },
+  {
     id: 'actions',
     cell: ({ row }) => {
       const entry = row.original;
@@ -224,6 +255,11 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
     size: 50,
     minSize: 50,
     maxSize: 50,
+    // --- Add meta for sticky positioning ---
+    meta: {
+      stickyDirection: 'right',
+    },
+    // --------------------------------------
   },
 ];
 
@@ -362,6 +398,9 @@ export default function CreditPoliticalRiskTable({ fetchedData, riskClass }: Cre
                   const canResize = header.column.getCanResize();
                   const isResizing = header.column.getIsResizing();
                   const resizeHandler = canResize ? header.getResizeHandler() : undefined;
+                  // --- Get sticky direction from column meta ---
+                  const stickyDirection = header.column.columnDef.meta?.stickyDirection;
+                  // -------------------------------------------
 
                   return (
                     <TableHead
@@ -374,6 +413,7 @@ export default function CreditPoliticalRiskTable({ fetchedData, riskClass }: Cre
                       canResize={canResize}
                       isResizing={isResizing}
                       onResizeMouseDown={resizeHandler}
+                      stickyDirection={stickyDirection}
                     >
                       {header.isPlaceholder
                         ? null
@@ -396,8 +436,15 @@ export default function CreditPoliticalRiskTable({ fetchedData, riskClass }: Cre
                   onClick={() => handleRowClick(row)}
                 >
                   {row.getVisibleCells().map((cell: Cell<CreditRiskEntry, unknown>) => {
+                    // --- Get sticky direction from column meta ---
+                    const stickyDirection = cell.column.columnDef.meta?.stickyDirection;
+                    // -------------------------------------------
                     return (
-                      <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+                      <TableCell
+                         key={cell.id}
+                         style={{ width: cell.column.getSize() }}
+                         stickyDirection={stickyDirection}
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     );

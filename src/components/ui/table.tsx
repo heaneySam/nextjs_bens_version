@@ -36,6 +36,7 @@ interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   // Expect individual handlers directly
   onResizeMouseDown?: (event: React.MouseEvent) => void;
   onResizeTouchStart?: (event: React.TouchEvent) => void;
+  stickyDirection?: 'left' | 'right';
   // We won't expect style here anymore, it comes from the main style prop
   // children is implicitly included
 }
@@ -165,6 +166,7 @@ const TableHead = React.forwardRef<
       // Use individual handler props
       onResizeMouseDown,
       onResizeTouchStart,
+      stickyDirection,
       ...props
     },
     ref
@@ -204,6 +206,8 @@ const TableHead = React.forwardRef<
           "text-foreground h-10 px-4 text-left align-middle font-medium [&:has([role=checkbox])]:pl-4 [&:has([role=checkbox])]:pr-0",
           sortable && "select-none", // Removed cursor-pointer here
           canResize && "cursor-col-resize", // Apply resize cursor to the whole TH
+          stickyDirection === 'left' && "sticky left-0 z-20 bg-background",
+          stickyDirection === 'right' && "sticky right-0 z-20 bg-background",
           className
         )}
         {...props}
@@ -237,8 +241,8 @@ TableHead.displayName = "TableHead";
 // TableCell - Adjusted padding for checkbox scenario
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, style, children, ...props }, ref) => { // Accept children explicitly
+  React.TdHTMLAttributes<HTMLTableCellElement> & { stickyDirection?: 'left' | 'right' }
+>(({ className, style, children, stickyDirection, ...props }, ref) => { // Accept children explicitly
   return (
     <td
       ref={ref}
@@ -246,6 +250,8 @@ const TableCell = React.forwardRef<
       className={cn(
         // Adjusted padding, especially for checkbox columns (pr-0 is removed by default, added via [&:has(...)])
         "p-4 align-middle [&:has([role=checkbox])]:pl-4 [&:has([role=checkbox])]:pr-0",
+        stickyDirection === 'left' && "sticky left-0 z-10 bg-background",
+        stickyDirection === 'right' && "sticky right-0 z-10 bg-background",
         className
       )}
       style={style} // Apply passed style (e.g., width from column sizing)

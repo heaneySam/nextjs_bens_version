@@ -1,0 +1,483 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+A consolidated Markdown guide based on the provided Whitespace documentation (including the OCR'd PDFs) and the public Swagger UI, focusing on the workflow for an insurance carrier to:
+
+1.  Receive quote requests via the API (likely through queues).
+2.  Retrieve the details of the risk associated with the request.
+3.  Send a response (quote or decline) back to Whitespace via the API.
+
+Be cautious about potentially outdated information in static documents. We'll use the provided texts as a base but please cross-reference with the [Whitespace Swagger UI](mdc:frontendmvp/frontendmvp/https:/swagger.whitespace.co.uk) for the most current endpoint paths, parameters, and supported API versions.
+
+Let's structure this guide logically.
+
+---
+
+# Whitespace API Integration Guide for Carriers (Markdown)
+
+This guide consolidates information from various Whitespace documents to provide a workflow for carriers (insurers/reinsurers) integrating their systems with the Whitespace Platform API. The primary focus is on receiving quote requests, retrieving risk details, and responding with quotes or declines.
+
+**Disclaimer:** API specifications and best practices can evolve. While this guide is based on the provided documentation (dated up to ~mid-2023/early 2025) and general principles, **always refer to the official Whitespace Swagger UI ([https://swagger.whitespace.co.uk/](mdc:frontendmvp/frontendmvp/https:/swagger.whitespace.co.uk)) for the most current and accurate endpoint definitions, parameter requirements, and supported versions.**
+
+## Table of Contents
+
+1.  [Introduction](mdc:frontendmvp/frontendmvp/#introduction)
+2.  [Prerequisites](mdc:frontendmvp/frontendmvp/#prerequisites)
+3.  [Environments (Sandbox & Production)](mdc:frontendmvp/frontendmvp/#environments-sandbox--production)
+4.  [Authentication](mdc:frontendmvp/frontendmvp/#authentication)
+    *   [Service Tokens](mdc:frontendmvp/frontendmvp/#service-tokens)
+    *   [Using the Token](mdc:frontendmvp/frontendmvp/#using-the-token)
+    *   [Refreshing Tokens](mdc:frontendmvp/frontendmvp/#refreshing-tokens)
+    *   [SUMO Users (UserID Header)](mdc:frontendmvp/frontendmvp/#sumo-users-userid-header)
+    *   [Requesting & Revoking Tokens](mdc:frontendmvp/frontendmvp/#requesting--revoking-tokens)
+5.  [Core Concepts](mdc:frontendmvp/frontendmvp/#core-concepts)
+    *   [API Versioning](mdc:frontendmvp/frontendmvp/#api-versioning)
+    *   [Channels](mdc:frontendmvp/frontendmvp/#channels)
+    *   [Risk IDs and Document IDs](mdc:frontendmvp/frontendmvp/#risk-ids-and-document-ids)
+6.  [Workflow Step 1: Receiving Quote Requests via Queues](mdc:frontendmvp/frontendmvp/#workflow-step-1-receiving-quote-requests-via-queues)
+    *   [Queue Overview](mdc:frontendmvp/frontendmvp/#queue-overview)
+    *   [Identifying Quote Requests (`RWActivity`)](mdc:frontendmvp/frontendmvp/#identifying-quote-requests-rwactivity)
+    *   [Extracting Key Information (`parentDocID`)](mdc:frontendmvp/frontendmvp/#extracting-key-information-parentdocid)
+7.  [Workflow Step 2: Retrieving Risk/Quote Request Details](mdc:frontendmvp/frontendmvp/#workflow-step-2-retrieving-riskquote-request-details)
+    *   [Using Defined Data API (Recommended)](mdc:frontendmvp/frontendmvp/#using-defined-data-api-recommended)
+    *   [Fetching Full Document Structure](mdc:frontendmvp/frontendmvp/#fetching-full-document-structure)
+8.  [Workflow Step 3: Responding to Quote Requests](mdc:frontendmvp/frontendmvp/#workflow-step-3-responding-to-quote-requests)
+    *   [Option A: Declining the Quote Request](mdc:frontendmvp/frontendmvp/#option-a-declining-the-quote-request)
+    *   [Option B: Preparing and Sending a Quote](mdc:frontendmvp/frontendmvp/#option-b-preparing-and-sending-a-quote)
+        *   [B.1: Create Quote in Preparation](mdc:frontendmvp/frontendmvp/#b1-create-quote-in-preparation)
+        *   [B.2: Edit the Quote (e.g., Add Premium)](mdc:frontendmvp/frontendmvp/#b2-edit-the-quote-eg-add-premium)
+        *   [B.3: Show Quote to Broker](mdc:frontendmvp/frontendmvp/#b3-show-quote-to-broker)
+9.  [Other Useful Endpoints](mdc:frontendmvp/frontendmvp/#other-useful-endpoints)
+10. [Error Handling & Best Practices](mdc:frontendmvp/frontendmvp/#error-handling--best-practices)
+11. [References](mdc:frontendmvp/frontendmvp/#references)
+
+## Introduction
+
+This guide assists developers in integrating external carrier systems with the Whitespace API. It focuses on automating the process of handling incoming quote requests originating from brokers on the Whitespace Platform.
+
+## Prerequisites
+
+*   **Whitespace Accounts:** Access to both Sandbox (testing) and Production (live) environments, potentially including user accounts with appropriate permissions and dedicated service accounts for API integration.
+*   **API Service Token:** A valid Bearer token for authentication (see [Authentication](mdc:frontendmvp/frontendmvp/#authentication)).
+*   **Development Tools:** Tools capable of making RESTful API calls (e.g., `curl`, Postman, or integrated libraries within your application stack like Python `requests`, Node.js `axios`, etc.).
+*   **JSON Handling:** Ability to parse and construct JSON payloads. Tools like `jq` (command-line) can be helpful for exploring responses.
+*   **(Optional) Queue Client:** A client library compatible with Microsoft Azure Service Bus Queues if using the queue-based integration method (recommended for receiving events).
+
+## Environments (Sandbox & Production)
+
+Whitespace provides two main environments:
+
+*   **Sandbox:** For testing and development. Uses distinct user accounts, tokens, and data.
+    *   Base URL: `https://sandbox.whitespace.co.uk`
+*   **Production:** The live environment.
+    *   Base URL: `https://www.whitespaceplatform.com` (Verify this in official documentation or with Whitespace support, sometimes it might be just `https://whitespace.co.uk`)
+
+Throughout this guide, we'll use `$ROOT` as a placeholder for the base URL. You'll also need environment variables or configuration settings for your API token (`$TOKEN`) and relevant risk/document IDs (`$IC`, `$QR`, `$UQ`).
+
+**Example Setup (Bash):**
+
+```bash
+# Sandbox
+export ROOT="https://sandbox.whitespace.co.uk"
+export TOKEN="eyJ0eXAiOiJKV..." # Your actual Sandbox token
+
+# Production (Example - verify URL)
+# export ROOT="https://www.whitespaceplatform.com"
+# export TOKEN="prod_eyJ0eXAiOiJKV..." # Your actual Production token
+```
+
+## Authentication
+
+System-to-system API access primarily uses **Service Tokens**.
+
+### Service Tokens
+
+*   Whitespace Support provides service tokens upon request.
+*   Tokens are delivered in a JSON file, typically password-protected.
+*   The JSON file contains:
+    *   `token`: The actual Bearer token string.
+    *   `kid`: An identifier used for revoking the token.
+    *   `expiry`: The token's expiration date (YYYY-MM-DD format noted, max 1 year duration suggested in docs).
+
+```json
+{
+  "token": "eyJ0eX...",
+  "kid": "wssvc_COMPANYID_contact.email@wstpt.co.uk_1648767599",
+  "expiry": "2025-01-01"
+}
+```
+
+### Using the Token
+
+Pass the token value in the `Authorization` HTTP header, prefixed with `Bearer ` (note the space).
+
+```bash
+# Example using curl
+curl -H "Authorization: Bearer $TOKEN" "$ROOT/api/user/myDetails"
+```
+
+### Refreshing Tokens
+
+*   Service tokens obtained via the standard request process typically have a fixed expiry date (e.g., 1 year). Monitor expiry and request new tokens proactively.
+*   Tokens generated via the *user login flow* (less common for backend integrations, detailed in `Refreshing Tokens` PDF) last one hour and can be refreshed using the `/auth/apiRefresh` endpoint with the *current, non-expired* token in the `Authorization` header. This returns a *new* token valid for another hour. Refresh calls fail if the token is expired or has <10 minutes validity remaining.
+
+### SUMO Users (UserID Header)
+
+If a single *user* (not typically a service account) has logins for multiple organisations (Single User Multiple Organisation), an additional header is required to specify which identity to use:
+
+```bash
+# Find the correct UserID (MUxxx...) using /shared/corporate endpoint
+# Then, include it in subsequent calls:
+export UIMU="MU00000000-0000-0000-0000-000000000000" # Example UserID for a specific org
+curl -H "Authorization: Bearer $TOKEN" -H "UserID:$UIMU" "$ROOT/api/risks"
+```
+
+Service accounts are typically tied to one organisation and do not require the `UserID` header.
+
+### Requesting & Revoking Tokens
+
+*   **Request:** Email `support@whitespace.co.uk` with:
+    *   Your Organisation Name / COMPANYID.
+    *   Contact email for monitoring the service account (must be monitored). Use format `wssvc_COMPANYID_contact.email@yourdomain.com` for dedicated service accounts.
+    *   Environment (Sandbox or Production).
+    *   Preferred expiry date (max 1 year).
+    *   **For Production:** The source IP address(es) or ranges from which API calls will originate (mandatory for security). 0.0.0.0/0 is generally not allowed for Production. IPs are strongly recommended for Sandbox too.
+*   **Revoke:** Email `support@whitespace.co.uk` with the `kid` value of the token to be revoked, or the associated email address to revoke all tokens for that account. You can also suspend the associated user in the Admin portal as a first step if applicable.
+
+## Core Concepts
+
+### API Versioning
+
+*   Some endpoints *may* include a version number in the URL path, like `/api/v22.04/risks/newDraft`. The format is `vYY.MM`.
+*   However, the documentation states *most* endpoints do not use path versioning and additions/optional inputs/behaviour changes generally don't trigger a new versioned endpoint.
+*   **Rule of thumb:** Check the Swagger UI for the correct, current path for any endpoint you intend to use. The `v22.04` version appears frequently in the 2022/2023 documents provided, particularly for the Defined Data API (`/api/v22.04/data/...`). Verify if this is still the latest or if a newer version exists. Many core endpoints like `/api/risks/{riskId}` or `/api/user/myDetails` seem unversioned in the path based on examples.
+
+### Channels
+
+*   Whitespace uses Couchbase channels to control document access.
+*   Channels combine `companyID` and `teamID` (e.g., `blackpool_MARINE`).
+*   Most risk documents are restricted to the channels of the involved parties (broker team, underwriter teams).
+*   The `shared` channel is accessible to all users.
+*   Find *your* channels via `GET /api/user/myDetails`.
+*   Find *other organisations'* channels via `GET /api/shared/corporate`.
+*   Accessing a document your channels don't include results in an error.
+
+### Risk IDs and Document IDs
+
+*   **Risk Root ID (`$IC`):** A unique 38-character identifier for a contract/risk, always starting with `IC`. Example: `ICBC2647B7-778F-49D3-84AC-316F8C297ACB`. This often represents the core risk record.
+*   **Document ID:** Identifies specific *instances* or *actions* related to a risk. It's composed of the Root ID plus additional segments separated by `::`.
+    *   `$RootID::QR1`: Quote Request #1. (`$QR` placeholder used later)
+    *   `$RootID::FO`: Firm Order instance.
+    *   `$RootID::MUB708...::UQ1`: Underwriter Quote #1 from user MUB708... (`$UQ` placeholder used later)
+    *   `$RootID::FO::ACTI::...`: An Activity document related to the Firm Order.
+    *   `$RootID::FO::ARCH::...`: An Archive document related to the Firm Order.
+*   API endpoints sometimes require the Root ID (`$IC`) and others require a specific Document ID. Pay close attention to endpoint definitions in Swagger.
+
+## Workflow Step 1: Receiving Quote Requests via Queues
+
+Whitespace uses Microsoft Azure Service Bus Queues to push notifications about significant events. This is the recommended way for an integration to learn about new quote requests instantly.
+
+### Queue Overview
+
+*   Contact Whitespace Support (`support@whitespace.co.uk`) to get your organisation's dedicated queue name, connection string, and key.
+*   Use an Azure Service Bus SDK (available for .NET, Java, Python, JS, Go, etc.) to connect and listen to your queue.
+*   The typical flow is:
+    1.  Poll/Receive the oldest message.
+    2.  Process the message content (JSON).
+    3.  Confirm successful receipt to delete the message from the queue.
+*   Messages are generally served in strict order. Implement de-duplication based on message ID (`_id`) if necessary.
+
+### Identifying Quote Requests (`RWActivity`)
+
+*   Events are published as `RWActivity` documents (or `RWCustomActivity` if configured).
+*   The key field indicating the type of event is `hardcodedActivity`.
+*   For new quote requests initiated by a broker, the value will be:
+    *   `"Quote Requested"`
+
+**Example `RWActivity` Message Snippet (for a Quote Request):**
+
+```json
+// Simplified structure received from the queue
+{
+  // ... other fields like _id, _rev, createdAt, channels, apnsData ...
+  "activity": "Quote Requested", // User-readable activity
+  "hardcodedActivity": "Quote Requested", // **Key field to check**
+  "parentDocID": "IC29C995DE-1924-468F-8C30-D9E59EF82A13::QR1", // **ID of the Quote Request doc**
+  "type": "RWActivity",
+  "userID": "MUBrokerUserID..." // ID of the user who performed the action
+  // ... provenance etc ...
+}
+```
+
+### Extracting Key Information (`parentDocID`)
+
+*   When you receive a message with `hardcodedActivity == "Quote Requested"`, the most important piece of information is the `parentDocID`.
+*   This `parentDocID` is the **Document ID** of the actual quote request document (e.g., `IC...::QR1`). We will refer to this as `$QR` in the next steps.
+
+## Workflow Step 2: Retrieving Risk/Quote Request Details
+
+Once you have the Quote Request Document ID (`$QR`) from the queue message, you need to fetch the details of the contract/risk presented for quotation.
+
+### Using Defined Data API (Recommended)
+
+This API provides tagged data fields in a structured format, often aligned with standards like Lloyd's CDR or ACORD GPM. **Check Swagger for the current version (e.g., v22.04, v23.10, etc.).**
+
+*   **Endpoint:** `GET /api/v{version}/data/{documentId}`
+*   **Call:** `GET /api/v22.04/data/$QR` (Replace `v22.04` with the current version from Swagger).
+*   **Response:** Returns metadata about the document and a `definedData` array containing tagged fields.
+
+```bash
+# Replace v22.04 with current version if different
+curl -H "Authorization: Bearer $TOKEN" "$ROOT/api/v22.04/data/$QR" | jq .
+```
+
+**Example `definedData` Response Snippet:**
+
+```json
+{
+  "metadata": {
+    "documentRevision": "4-f33624e96b21035db9a370901c961e74", // Needed for updates
+    "userID": "MUBrokerUserID...",
+    "documentID": "IC29C995DE-1924-468F-8C30-D9E59EF82A13::QR1",
+    "tagSet": "Whitespace", // Or ACORDGPM if requested
+    "version": "22.04",
+    // ... other metadata ...
+  },
+  "multiSectionDefinition": [],
+  "definedData": [
+    {
+      "value": "B0999MT2705110219",
+      "tag": "Broker_Reference",
+      "mrcHeading": "UMR",
+      "name": "DefinedData0",
+      "parentID": "Page:C09BF702-7E21-4200-AA41-0EDADF934635",
+      "lineItemIndex": 1
+    },
+    {
+      "value": "1 January 2025",
+      "tag": "InceptionDate",
+      "mrcHeading": "Period",
+      "name": "DefinedData3",
+      "parentID": "Page:D9056331-440A-4120-B8AF-37C7B9C91E72",
+      "lineItemIndex": 5
+    },
+    // ... more tagged data items ...
+  ]
+}
+```
+
+*   **Alternative Tagsets:** You can request data using ACORD GPM tags if available:
+    `GET /api/v22.04/data/$QR/tagset/ACORDGPM`
+
+### Fetching Full Document Structure
+
+This provides the complete contract structure as stored in Whitespace's JMRC (JSON Market Reform Contract) format. It's more detailed but less structured for data extraction than the Defined Data API.
+
+*   **Endpoint:** `GET /api/risks/{documentId}`
+*   **Call:** `GET /api/risks/$QR`
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "$ROOT/api/risks/$QR" | jq .
+```
+
+This returns the entire contract JSON, including all sections, line items, text, placeholders, etc.
+
+## Workflow Step 3: Responding to Quote Requests
+
+After retrieving and processing the risk details associated with `$QR`, you can respond either by declining or by providing a quote.
+
+### Option A: Declining the Quote Request
+
+If the underwriter decides not to quote.
+
+*   **Endpoint:** `POST /api/risks/{quoteRequestId}/declineQuoteRequest`
+*   **Method:** `POST`
+*   **Parameters:**
+    *   `quoteRequestId`: The Document ID of the quote request (`$QR`).
+*   **Payload:** Empty JSON `{}` or no payload required.
+
+```bash
+# Using the $QR obtained from the queue message
+curl -X POST -H "Authorization: Bearer $TOKEN" "$ROOT/api/risks/$QR/declineQuoteRequest" -d '{}'
+```
+
+*   **Successful Response:**
+
+```json
+{
+  "msg": "Quote Request IC29C995DE-1924-468F-8C30-D9E59EF82A13::QR1 successfully declined"
+}
+```
+
+### Option B: Preparing and Sending a Quote
+
+This is a multi-step process:
+
+#### B.1: Create Quote in Preparation
+
+This creates a new draft quote document based on the broker's request, which you can then modify.
+
+*   **Endpoint:** `POST /api/risks/{quoteRequestId}/changeDraftNowQuoteInPreparation`
+*   **Method:** `POST`
+*   **Parameters:**
+    *   `quoteRequestId`: The Document ID of the quote request (`$QR`).
+*   **Payload:** Empty JSON `{}` or no payload required.
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" "$ROOT/api/risks/$QR/changeDraftNowQuoteInPreparation" -d '{}'
+```
+
+*   **Successful Response:** Contains the `newDocID` of the newly created underwriter quote document. **Store this ID**, we'll refer to it as `$UQ`.
+
+```json
+{
+  "newDocID": "IC29C995DE-1924-468F-8C30-D9E59EF82A13::MUCarrierUserID...::UQ1"
+}
+# Let's store this in $UQ
+export UQ="IC29C995DE-1924-468F-8C30-D9E59EF82A13::MUCarrierUserID...::UQ1"
+```
+
+#### B.2: Edit the Quote (e.g., Add Premium)
+
+You'll typically need to modify the quote document (`$UQ`) to add premium details, conditions, references, etc. This often involves editing specific line items within the contract structure.
+
+*   **Step 1: Get the current state and revision:** Fetch the full structure of the quote document you just created.
+    ```bash
+    curl -H "Authorization: Bearer $TOKEN" "$ROOT/api/risks/$UQ" > quote_document.json
+    # Find the "_rev" value and the specific line item JSON you want to edit within quote_document.json
+    # Example: export CURRENT_REV="1-bcb3752fc89927e3ed90fe7cb1208c9f"
+    ```
+*   **Step 2: Prepare the edit payload:** Construct a JSON payload specifically for the `editLineItem` endpoint. This requires:
+    *   `op`: "edit"
+    *   `_rev`: The current revision (`CURRENT_REV`) obtained in Step 1.
+    *   The *complete*, *modified* JSON object for the line item you are changing. You cannot send partial updates for a line item.
+
+    **Example Payload (editing Premium line item - from `QUOTING AND DECLINING...` PDF):**
+    *(Save this as `edit_premium_payload.json` after inserting the correct `_rev`)*
+
+    ```json
+    {
+      "op": "edit",
+      "_rev": "1-bcb3752fc89927e3ed90fe7cb1208c9f", // <-- Replace with actual CURRENT_REV
+      "locked": false,
+      "originalSection": "",
+      "fragments": [],
+      "elements": [
+        {
+          "text": "[[Amount1]] ([[Percentage1]]) annual to be paid in four instalments", // Modified text if needed
+          "index": 0
+        }
+      ],
+      "subItems": [],
+      "nameVariation": "Premium",
+      "mrcSection": "RiskDetails",
+      "tagPages": [
+        {
+          "sectionIDs": [],
+          "title": "",
+          "pageID": "420C3136-5746-4D12-9CAE-E3BBAA5741D4"
+        }
+      ],
+      "index": 14, // Index of the Premium line item within its section
+      "originalHeading": "PREMIUM",
+      "mrcHeading": "Premium",
+      "placeholders": [
+        {
+          "originalValue": "USD 6,060,000", // Original value (can be useful)
+          "name": "Amount1",
+          "phType": "Amount",
+          "value": "USD 6,060,000" // Updated value
+        },
+        {
+          "originalValue": "100%",
+          "name": "Percentage1",
+          "phType": "Percentage",
+          "value": "100%" // Updated value
+        }
+      ]
+    }
+    ```
+
+*   **Step 3: Send the edit request:**
+    *   **Endpoint:** `POST /api/risks/{quoteDocId}/editLineItem`
+    *   **Method:** `POST`
+    *   **Headers:** `Authorization: Bearer $TOKEN`, `Content-Type: application/json`
+    *   **Payload:** The JSON constructed in Step 2 (`edit_premium_payload.json`).
+
+    ```bash
+    export CTAJ="Content-Type: application/json"
+    curl -X POST -H "Authorization: Bearer $TOKEN" -H "$CTAJ" \
+         "$ROOT/api/risks/$UQ/editLineItem" \
+         -d @edit_premium_payload.json
+    ```    *   A successful response will contain the `id` and the *new* `_rev` of the document. You might need to perform multiple edits (e.g., for conditions, references), updating the `_rev` each time.
+
+*   **Alternative: Using Defined Data API for Updates:** If the data you need to change is available via the Defined Data API, you *might* be able to update it there.
+    *   **Endpoint:** `POST /api/v{version}/data/{documentId}`
+    *   **Method:** `POST`
+    *   **Payload:** Requires the `metadata` block (with current `documentRevision`) from a recent `GET` call, and a `definedData` array containing *only* the fields to be changed, with their new `value`.
+    *   **Verification:** Always use `POST /api/v{version}/data/{documentId}/verify` first with the same payload to check for errors before attempting the live update.
+    *   **Note:** Check if this method is suitable for adding quote-specific details like premium or if `editLineItem` is required. `editLineItem` seems more likely for modifying the core contract content during quoting.
+
+#### B.3: Show Quote to Broker
+
+Once all edits to the quote document (`$UQ`) are complete, make it visible to the broker.
+
+*   **Endpoint:** `POST /api/risks/{quoteDocId}/showQuoteToBroker`
+*   **Method:** `POST`
+*   **Parameters:**
+    *   `quoteDocId`: The Document ID of the underwriter quote (`$UQ`).
+*   **Payload:** Empty JSON `{}` or no payload required.
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" "$ROOT/api/risks/$UQ/showQuoteToBroker" -d '{}'
+```
+
+*   **Successful Response:**
+
+```json
+{
+  "msg": "doc with id IC29C995DE...::MUCarrierUserID...::UQ1 successfully shown to broker"
+}
+```
+
+The broker will now see the quote on the Whitespace Platform and receive a notification (potentially via their own queue).
+
+## Other Useful Endpoints
+
+*   `GET /api/version`: Check API version and build date.
+*   `GET /api/user/myDetails`: Get details about the authenticated user/token.
+*   `GET /api/user/colleagues`: Get details about colleagues in your organisation.
+*   `GET /api/summary`: List the most recent risks accessible to the user. (Can filter by date `?from=YYYY-MM-DD`).
+*   `GET /api/risks/root/{rootId}`: List all document instances associated with a root risk ID (`$IC`).
+*   `GET /api/activities/{documentId}`: Get the history/activity log for a specific document. `/api/activities/{documentId}/full` for more detail.
+*   `GET /api/attachments/{documentId}`: List attachments associated with a document.
+*   `GET /api/export/pdf/{documentId}`: Download a PDF representation of a specific document instance.
+*   `POST /api/labels/{rootId}` / `GET /api/labels/{rootId}` / `DELETE /api/labels/{labelId}`: Manage simple text labels on risks (useful for internal flags/workflows).
+
+## Error Handling & Best Practices
+
+*   **Check Swagger:** Always verify endpoint paths, parameters, versions, and payload structures in the Swagger UI.
+*   **HTTP Status Codes:** Errors are typically reported with a `4xx` status code (e.g., `401 Unauthorized`, `400 Bad Request`, `403 Forbidden`, `404 Not Found`). Response bodies may contain a simple JSON error message like `{"error": true, "reason": "Invalid WSAUTH"}` but often lack detailed explanations for security reasons.
+*   **Common Mistakes:**
+    *   Incorrect Risk/Document ID format (Root vs. full ID with `::`).
+    *   Using a stale revision (`_rev` or `documentRevision`) for POST/update operations. Always GET the latest state first.
+    *   Case sensitivity issues (e.g., team IDs vs. channels).
+    *   Incorrect `Content-Type` header (should be `application/json` for POST calls with JSON bodies).
+    *   Missing `Authorization` header or invalid/expired token.
+    *   IP address not whitelisted (Production).
+    *   Trying to access a document not shared via Channels.
+*   **Idempotency:** Be mindful of network errors. If a POST request times out, you might not know if the action succeeded. Design your logic to handle potential duplicate actions where possible, or use unique identifiers if creating resources.
+*   **Use `/verify`:** For Defined Data API updates (`POST /api/v{version}/data/...`), always use the `/verify` endpoint first to catch payload errors before attempting the live update.
+*   **Logging:** Log your API requests and responses, including status codes and any error messages, to aid debugging.
+*   **Rate Limiting:** Be aware of potential API rate limits, although not explicitly detailed in the provided documents. Implement reasonable delays or backoff strategies if making high volumes of calls.
+
+## References
+
+*   **Whitespace Swagger UI:** [https://swagger.whitespace.co.uk/](mdc:frontendmvp/frontendmvp/https:/swagger.whitespace.co.uk) (Primary source for current API details)
+*   **API Documentation Site:** [http://apidocs.whitespace.co.uk/](mdc:frontendmvp/frontendmvp/http:/apidocs.whitespace.co.uk) (May contain conceptual guides and links to PDFs like the ones provided)
+
+---
+
+This Markdown guide should provide a solid starting point. Remember to validate the specific API calls, paths (especially the version for the Defined Data API), and payload structures against the live Swagger documentation as you develop your integration. Good luck!
