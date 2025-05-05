@@ -60,6 +60,7 @@ export type CreditRiskEntry = {
   expiry_date?: string | null;
   status?: string; // Consider using choice values: 'processing', etc.
   score?: number | null;
+  attachments_count?: number | null;
   // Add other fields from RiskBase if needed (e.g., created_at, updated_at)
   created_at?: string;
   updated_at?: string;
@@ -86,9 +87,9 @@ const placeholderData: CreditRiskEntry[] = [
 */
 // -----------------------------------------
 
-// Define Columns - Simplified Headers
-// Update accessors to match the new CreditRiskEntry type fields
+// Define Columns - Reordered and with default visibility in mind
 export const columns: ColumnDef<CreditRiskEntry>[] = [
+  // --- Always Visible Controls ---
   {
     id: 'select',
     header: ({ table }) => (
@@ -112,18 +113,17 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
       />
     ),
     enableSorting: false,
-    enableHiding: false,
+    enableHiding: false, // Keep Select always visible/hidable? User can still toggle in menu if true. Setting false for now.
     size: 40,
     minSize: 40,
     maxSize: 40,
+    // --- Add meta for sticky positioning ---
+    meta: {
+      stickyDirection: 'left',
+    },
+    // --------------------------------------
   },
-  {
-    accessorKey: 'id',
-    header: 'ID',
-    // Display only a part of the UUID for brevity if desired
-    cell: ({ row }) => <div className="text-left font-medium truncate" title={row.getValue('id')}>{String(row.getValue('id')).substring(0, 8)}...</div>,
-    size: 100, // Adjust size for UUID
-  },
+  // --- Default Visible Columns (User Specified Order) ---
   {
     accessorKey: 'insured',
     header: 'Insured',
@@ -135,39 +135,14 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
     cell: ({ row }) => <div className="text-left">{row.getValue('counterparty') || '-'}</div>, // Handle potentially empty strings
   },
   {
-    accessorKey: 'product',
-    header: 'Product',
-    // Display the readable choice label if possible, or format the key
-    cell: ({ row }) => {
-        const productValue = row.getValue('product');
-        const displayValue = String(productValue || '-').replace('_', ' ');
-        return <div className="text-left capitalize">{displayValue}</div>;
-    },
-  },
-  {
     accessorKey: 'country_of_risk', // Changed from 'country'
     header: 'Country(s) of Risk',
     cell: ({ row }) => {
       const country = row.original.country_of_risk;
       // TODO: Add flag lookup based on country or countryCode
       const flag = country === '-' ? '' : '🌍'; // Replace with actual flag component/emoji
-      return <div className="flex items-center space-x-2">{flag} {country}</div>;
+      return <div className="flex items-center space-x-2">{flag} {country || '-'}</div>; // Handle null/empty
     },
-  },
-  {
-    accessorKey: 'creation_date', // Changed from 'creationDate'
-    header: 'Creation Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('creation_date') || '-'}</div>, // TODO: Format date
-  },
-  {
-    accessorKey: 'inception_date', // Changed from 'inceptionDate'
-    header: 'Inception Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('inception_date') || '-'}</div>, // TODO: Format date
-  },
-  {
-    accessorKey: 'expiry_date', // Changed from 'expiryDate'
-    header: 'Expiry Date',
-    cell: ({ row }) => <div className="text-left">{row.getValue('expiry_date') || '-'}</div>, // TODO: Format date
   },
   {
     accessorKey: 'status',
@@ -198,21 +173,21 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
     },
   },
   {
+    accessorKey: 'attachments_count',
+    header: 'Attachments',
+    cell: ({ row }) => {
+        const count = row.getValue('attachments_count') as number | null | undefined;
+        // Display 0 if count is null/undefined or 0
+        return <div className="text-center font-medium">{count || 0}</div>;
+    },
+    size: 100,
+    enableHiding: true, // Allow hiding/showing via menu
+  },
+  {
     accessorKey: 'source_system',
     header: 'Source System',
     cell: ({ row }) => <div className="text-left font-medium">{row.getValue('source_system') || '-'}</div>,
     size: 120,
-  },
-  {
-    accessorKey: 'source_record_id',
-    header: 'Source ID',
-    // Display truncated like the main ID
-    cell: ({ row }) => {
-        const sourceId = row.getValue('source_record_id') as string | undefined | null;
-        const displayId = sourceId ? (sourceId.length > 15 ? `${sourceId.substring(0, 15)}...` : sourceId) : '-';
-        return <div className="text-left font-medium truncate" title={sourceId || ''}>{displayId}</div>;
-    },
-    size: 150,
   },
   {
     accessorKey: 'unstructured_data',
@@ -225,6 +200,57 @@ export const columns: ColumnDef<CreditRiskEntry>[] = [
     },
     size: 200, // Allow more space for the preview
   },
+  // --- Default Hidden Columns ---
+  {
+    accessorKey: 'id',
+    header: 'ID',
+    // Display only a part of the UUID for brevity if desired
+    cell: ({ row }) => <div className="text-left font-medium truncate" title={row.getValue('id')}>{String(row.getValue('id')).substring(0, 8)}...</div>,
+    size: 100, // Adjust size for UUID
+    enableHiding: true, // Allow hiding
+  },
+  {
+    accessorKey: 'product',
+    header: 'Product',
+    // Display the readable choice label if possible, or format the key
+    cell: ({ row }) => {
+        const productValue = row.getValue('product');
+        const displayValue = String(productValue || '-').replace('_', ' ');
+        return <div className="text-left capitalize">{displayValue}</div>;
+    },
+     enableHiding: true, // Allow hiding
+  },
+  {
+    accessorKey: 'creation_date', // Changed from 'creationDate'
+    header: 'Creation Date',
+    cell: ({ row }) => <div className="text-left">{row.getValue('creation_date') || '-'}</div>, // TODO: Format date
+    enableHiding: true, // Allow hiding
+  },
+  {
+    accessorKey: 'inception_date', // Changed from 'inceptionDate'
+    header: 'Inception Date',
+    cell: ({ row }) => <div className="text-left">{row.getValue('inception_date') || '-'}</div>, // TODO: Format date
+    enableHiding: true, // Allow hiding
+  },
+  {
+    accessorKey: 'expiry_date', // Changed from 'expiryDate'
+    header: 'Expiry Date',
+    cell: ({ row }) => <div className="text-left">{row.getValue('expiry_date') || '-'}</div>, // TODO: Format date
+    enableHiding: true, // Allow hiding
+  },
+  {
+    accessorKey: 'source_record_id',
+    header: 'Source ID',
+    // Display truncated like the main ID
+    cell: ({ row }) => {
+        const sourceId = row.getValue('source_record_id') as string | undefined | null;
+        const displayId = sourceId ? (sourceId.length > 15 ? `${sourceId.substring(0, 15)}...` : sourceId) : '-';
+        return <div className="text-left font-medium truncate" title={sourceId || ''}>{displayId}</div>;
+    },
+    size: 150,
+    enableHiding: true, // Allow hiding
+  },
+  // --- Always Visible Controls (End) ---
   {
     id: 'actions',
     cell: ({ row }) => {
@@ -286,7 +312,17 @@ export default function CreditPoliticalRiskTable({ fetchedData, riskClass }: Cre
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    // Columns to hide by default
+    id: false,
+    product: false,
+    creation_date: false,
+    inception_date: false,
+    expiry_date: false,
+    source_record_id: false,
+    // Note: 'select' and 'actions' have enableHiding: false, so they stay visible
+    // Others (insured, counterparty, country_of_risk, status, source_system, unstructured_data) default to visible
+  });
 
   const table = useReactTable({
     data,

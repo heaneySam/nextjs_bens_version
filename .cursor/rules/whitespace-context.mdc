@@ -478,6 +478,158 @@ The broker will now see the quote on the Whitespace Platform and receive a notif
 *   **Whitespace Swagger UI:** [https://swagger.whitespace.co.uk/](mdc:frontendmvp/frontendmvp/https:/swagger.whitespace.co.uk) (Primary source for current API details)
 *   **API Documentation Site:** [http://apidocs.whitespace.co.uk/](mdc:frontendmvp/frontendmvp/http:/apidocs.whitespace.co.uk) (May contain conceptual guides and links to PDFs like the ones provided)
 
+
+## Attachments
+
+GET
+​/api​/attachments​/{rootID}
+Gets meta data for all attachments available on a risk
+
+Parameters
+Try it out
+Name	Description
+rootID *
+string
+(path)
+The unique ID of the risk
+
+Example : IC213DA609-D6B5-4A05-86B8-3FD91E861F57
+
+IC213DA609-D6B5-4A05-86B8-3FD91E861F57
+Responses
+Code	Description
+200	
+The meta data for all attachments available on the risk. Note that the parentDocID and identifier are the values used in GET /api/attachments/$parentDocID/$identifier to retrieve the content of the attachment.
+
+Example Value
+Schema
+[
+  {
+    "attachedAt": "2022-10-10 16:26:09",
+    "attachedByUser": "MU5F640CA3-FEEF-4E18-BAA0-EB9375824F68",
+    "attachmentName": "SiteMap.png",
+    "channels": [
+      "blackpool_PROPERTY"
+    ],
+    "content_type": "application/octet-stream",
+    "digest": "sha1-PQdi0wPAzykWJ+J4yjVIxrvsj30=",
+    "identifier": "A-6825C239-CDB3-429F-B53C-24058533F20A",
+    "length": 767008,
+    "parentDocID": "IC8248761E-ABDF-4B52-B484-DF6174364694::ATCH::A-6825C239-CDB3-429F-B53C-24058533F20A",
+    "version": 1
+  }
+]
+401	
+Unauthorized call
+
+Example Value
+Schema
+{
+  "error": true,
+  "reason": "Invalid WSAUTH"
+}
+
+************
+
+GET
+​/api​/attachments​/array​/{rootID}
+Gets meta data for all attachments on a risk
+
+Parameters
+Try it out
+Name	Description
+rootID *
+string
+(path)
+The unique ID of the risk
+
+Example : IC213DA609-D6B5-4A05-86B8-3FD91E861F57
+
+IC213DA609-D6B5-4A05-86B8-3FD91E861F57
+Responses
+Code	Description
+200	
+An array of attachment meta data. This was provided as an alternative to /attachments as an alternative format that may be easier to consume.
+
+Example Value
+Schema
+[
+  {
+    "attachedAt": "2023-02-14 14:51:00",
+    "attachedByUser": "MU5F640CA3-FEEF-4E18-BAA0-EB9375824F68",
+    "attachmentName": "LossHistory.xlsx",
+    "channels": [
+      "blackpool_MARINE"
+    ],
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "digest": "sha1-YOPp9u6xEkGQW1EGpErvxoBAxs0=",
+    "identifier": "A-6690DC47-A84D-4EC2-9C5C-92F12307A41E",
+    "length": 9244,
+    "parentDocID": "IC3F18C8EC-E6F4-4C93-A894-09259B312D13::ATCH::A-6690DC47-A84D-4EC2-9C5C-92F12307A41E",
+    "version": 1
+  },
+  {
+    "attachedAt": "2023-02-14 14:51:10",
+    "attachedByUser": "MU5F640CA3-FEEF-4E18-BAA0-EB9375824F68",
+    "attachmentName": "Floorplan.png",
+    "channels": [
+      "blackpool_MARINE"
+    ],
+    "content_type": "image/png",
+    "digest": "sha1-iFd1D6xZBF4j9NNcmxr7DxArppQ=",
+    "identifier": "A-37D4FAD6-2E86-4BBD-917F-8CB996671173",
+    "length": 369396,
+    "parentDocID": "IC3F18C8EC-E6F4-4C93-A894-09259B312D13::ATCH::A-37D4FAD6-2E86-4BBD-917F-8CB996671173",
+    "version": 1
+  }
+]
+401	
+Unauthorized call
+
+Example Value
+Schema
+{
+  "error": true,
+  "reason": "Invalid WSAUTH"
+}
+
+**********
+
+GET
+​/api​/attachments​/{parentDocID}​/{identifier}
+Get an attachment
+
+Download an attachment, using values from a call to /api/attachments/$RiskID. The content will not be JSON, but the contents of the attachment which can be saved to a file.
+
+Due to limitations in Swagger, the attachment might not display properly when tested, but all attachment types can be downloaded normally outside Swagger.
+
+Parameters
+Try it out
+Name	Description
+parentDocID *
+string
+(path)
+The RWAttachmentCollection document, which is parentDocID in a call to /api/attachments/$RiskID
+
+Example : IC88965CED-A84B-42F3-8D42-A3534DB92B08::ATCH::A-2343226A-631E-4A1B-A89E-6FBEEFE0E5F3
+
+IC88965CED-A84B-42F3-8D42-A3534DB92B08::ATCH::A-2343226A-631E-4A1B-A89E-6FBEEFE0E5F3
+identifier *
+string
+(path)
+The unique id of the attachment, which is identifier in a call to /api/attachments/$RiskID
+
+Example : A-2343226A-631E-4A1B-A89E-6FBEEFE0E5F3
+
+A-2343226A-631E-4A1B-A89E-6FBEEFE0E5F3
+Responses
+Code	Description
+200	
+The content of the file, which will not be JSON, but more likely an image, spreadsheet etc
+
+**********
+
+
 ---
 
 This Markdown guide should provide a solid starting point. Remember to validate the specific API calls, paths (especially the version for the Defined Data API), and payload structures against the live Swagger documentation as you develop your integration. Good luck!
