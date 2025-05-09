@@ -43,91 +43,63 @@ export function GuidelinesTable({
         </thead>
         <tbody>
           {paginated.map((g) => (
-            g.external_url ? (
-              <a
-                key={g.id}
-                href={g.external_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'table-row',
-                  color: 'inherit',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  transition: 'background 0.2s',
-                }}
-                onMouseOver={e => (e.currentTarget.style.background = "#f5f5f5")}
-                onMouseOut={e => (e.currentTarget.style.background = "#fff")}
-                tabIndex={0}
-                role="link"
-                aria-label={g.name}
-              >
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.name}</td>
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.medical_speciality}</td>
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.viewcount}</td>
-                {typeof onDelete === "function" && (
-                  <td style={{ border: "1px solid #ddd", padding: 8, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      aria-label={`Delete ${g.name}`}
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onDelete(g.id);
-                      }}
-                      style={{
-                        background: '#fff',
-                        color: '#c00',
-                        border: '1px solid #c00',
-                        borderRadius: 4,
-                        padding: '4px 12px',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                )}
-              </a>
-            ) : (
-              <tr
-                key={g.id}
-                style={{ opacity: 0.5, background: "#fafafa" }}
-                aria-disabled="true"
-              >
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.name}</td>
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.medical_speciality}</td>
-                <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.viewcount}</td>
-                {typeof onDelete === "function" && (
-                  <td style={{ border: "1px solid #ddd", padding: 8, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      aria-label={`Delete ${g.name}`}
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onDelete(g.id);
-                      }}
-                      style={{
-                        background: '#fff',
-                        color: '#c00',
-                        border: '1px solid #c00',
-                        borderRadius: 4,
-                        padding: '4px 12px',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                )}
-              </tr>
-            )
+            <tr
+              key={g.id}
+              onClick={() => {
+                if (g.external_url) {
+                  window.open(g.external_url, '_blank', 'noopener,noreferrer');
+                }
+              }}
+              style={{
+                cursor: g.external_url ? 'pointer' : 'default',
+                background: '#fff',
+                transition: 'background 0.2s',
+                opacity: g.external_url ? 1 : 0.5,
+                ...(g.external_url ? {} : { background: "#fafafa" })
+              }}
+              onMouseOver={e => {
+                if (g.external_url) {
+                  e.currentTarget.style.background = "#f5f5f5";
+                }
+              }}
+              onMouseOut={e => {
+                if (g.external_url) {
+                  e.currentTarget.style.background = "#fff";
+                }
+              }}
+              tabIndex={g.external_url ? 0 : -1}
+              role={g.external_url ? 'link' : undefined}
+              aria-label={g.external_url ? g.name : undefined}
+              aria-disabled={!g.external_url}
+            >
+              <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.name}</td>
+              <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.medical_speciality}</td>
+              <td style={{ border: "1px solid #ddd", padding: 8 }}>{g.viewcount}</td>
+              {typeof onDelete === "function" && (
+                <td style={{ border: "1px solid #ddd", padding: 8, textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${g.name}`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onDelete(g.id);
+                    }}
+                    style={{
+                      background: '#fff',
+                      color: '#c00',
+                      border: '1px solid #c00',
+                      borderRadius: 4,
+                      padding: '4px 12px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </td>
+              )}
+            </tr>
           ))}
         </tbody>
       </table>

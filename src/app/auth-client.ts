@@ -5,8 +5,8 @@
  */
 export async function login(email: string): Promise<{ detail: string }> {
   // Only allow login for the authorized email
-  const allowedEmail = 'heaney.sam@gmail.com'; // <-- Replace with your email address
-  if (email.toLowerCase() !== allowedEmail.toLowerCase()) {
+  const allowedEmails = ['heaney.sam@gmail.com', 'heaney.ben@gmail.com']; // <-- Add your new email here
+  if (!allowedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
     return { detail: 'This email is not authorized to log in.' };
   }
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/code/request/`, {
