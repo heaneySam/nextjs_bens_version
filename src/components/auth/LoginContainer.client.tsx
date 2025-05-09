@@ -53,27 +53,26 @@ export default function ClientHomeWrapper() {
           {/* Content column */}
           <div className="w-full lg:w-1/2 flex-shrink-0 mb-12 lg:mb-0">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
-              Credit Insurance Syndications. Solved.
+              UHD Guidelines. Solved.
             </h1>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-muted-foreground">
-              Comprehensive management of non-payment insurance portfolios.
+              Comprehensive management of clinical guidelines.
             </p>
             <div className="mt-8 sm:mt-10">
               <LoginForm />
             </div>
           </div>
-          {/* Image column */}
           <div className="w-full lg:w-1/2 flex-shrink-0 hidden sm:block">
              {/* ... Image component ... */}
              <div className="rounded-md bg-background/5 shadow-2xl ring-1 ring-foreground/10 overflow-hidden">
-              <Image
+              {/* <Image
                 src="/images/dashboard-preview.png"
                 alt="App screenshot"
                 width={2432}
                 height={1442}
                 className="w-full h-auto"
                 priority
-              />
+              /> */}
             </div>
           </div>
         </div>
