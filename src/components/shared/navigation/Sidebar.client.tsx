@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Home, LayoutDashboard, BriefcaseBusiness, ShieldCheck, Users, LucideIcon } from 'lucide-react';
+import { Home, LayoutDashboard, BriefcaseBusiness, ShieldCheck, Users, LucideIcon, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -77,8 +77,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: risksBaseHref, label: 'Risks', icon: BriefcaseBusiness, isSection: true },
+    { href: '/guidelines/search', label: 'Search', icon: Search },
+    { href: '/guidelines/manage', label: 'Manage', icon: BriefcaseBusiness },
+    // { href: risksBaseHref, label: 'Browse', icon: BriefcaseBusiness},
   ];
 
   return (

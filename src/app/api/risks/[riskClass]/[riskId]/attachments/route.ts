@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Route
     return NextResponse.json({ error: 'Missing riskClass or riskId in path' }, { status: 400 });
   }
 
-  const { BACKEND_URL } = process.env;
+  const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
   if (!BACKEND_URL) {
     console.error('Error: BACKEND_URL environment variable is not set.');
     return NextResponse.json({ error: 'Internal server configuration error' }, { status: 500 });

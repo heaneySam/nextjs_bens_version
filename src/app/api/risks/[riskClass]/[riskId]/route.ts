@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 export const dynamic = 'force-dynamic';
 
 // Ensure BACKEND_URL is set in your environment variables
-const BACKEND_URL = process.env.BACKEND_URL;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Define the expected shape of the params for this specific route
 interface RiskDetailRouteParams {

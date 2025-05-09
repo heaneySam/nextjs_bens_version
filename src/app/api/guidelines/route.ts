@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   // Proxy the request to the backend
   const backendRes = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/risks/`,
+    `${process.env.NEXT_PUBLIC_API_URL}/api/guidelines/`,
     {
       method: 'POST',
       headers: {
@@ -35,11 +35,11 @@ export async function GET(request: Request) {
   const incoming = await headers();
   const cookie = incoming.get('cookie') || '';
   const url = new URL(request.url);
-  const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/risks${url.search}`;
+  const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/guidelines${url.search}`;
   const backendRes = await fetch(backendUrl, {
     headers: { cookie },
     cache: 'no-store',
   });
   const data = await backendRes.json();
   return NextResponse.json(data, { status: backendRes.status });
-} 
+}

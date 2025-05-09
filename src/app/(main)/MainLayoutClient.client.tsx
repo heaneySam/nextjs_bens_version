@@ -20,7 +20,7 @@ export default function MainLayoutClient({ children, user }: MainLayoutClientPro
       <ToasterProvider />
 
       <div className="sticky top-0 z-30 bg-background border-b">
-        <Header title="Dashboard" email={user.email} onMenuToggle={toggleSidebar} />
+        <Header title="UHD Guidelines" email={user.email} onMenuToggle={toggleSidebar} />
       </div>
 
       <div className="flex flex-1 overflow-hidden">

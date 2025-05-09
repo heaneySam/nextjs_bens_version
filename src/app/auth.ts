@@ -3,7 +3,7 @@ export type AuthResponse = { user: { id: string; email: string } | null };
 // Server-side authentication function
 import { cookies } from 'next/headers';
 // Backend base URL (configure via env var)
-const BACKEND_URL = process.env.BACKEND_URL!;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export async function auth(): Promise<AuthResponse> {
   try {

@@ -1,7 +1,7 @@
 // app/api/auth/session/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL!;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export const dynamic = 'force-dynamic';
 

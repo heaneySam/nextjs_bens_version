@@ -4,6 +4,11 @@
  * @returns The backend response (usually a detail message)
  */
 export async function login(email: string): Promise<{ detail: string }> {
+  // Only allow login for the authorized email
+  const allowedEmail = 'heaney.sam@gmail.com'; // <-- Replace with your email address
+  if (email.toLowerCase() !== allowedEmail.toLowerCase()) {
+    return { detail: 'This email is not authorized to log in.' };
+  }
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/code/request/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
