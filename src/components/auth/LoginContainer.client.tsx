@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoginForm from '@/components/auth/LoginForm.client';
 import ToasterProvider from '@/components/providers/ToasterProvider';
-import Image from 'next/image';
+// import Image from 'next/image'; // Removed unused import
 import { type AuthResponse } from '@/app/auth'; // Assuming you export this type
 
 export default function ClientHomeWrapper() {

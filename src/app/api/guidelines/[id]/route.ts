@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
   const incomingHeaders = await headers();
   const cookieHeader = incomingHeaders.get('cookie') || '';
-  const id = params.id;
+  const { id } = await paramsPromise;
   console.log('DELETE called for id:', id);
 
   const backendRes = await fetch(

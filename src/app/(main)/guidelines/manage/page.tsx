@@ -42,8 +42,12 @@ export default function ManageGuidelinesPage() {
       const data = await res.json();
       data.sort((a: Guideline, b: Guideline) => (b.viewcount ?? 0) - (a.viewcount ?? 0));
       setGuidelines(data);
-    } catch (err: any) {
-      setError(err.message || "Unknown error");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unknown error");
+      }
     } finally {
       setLoading(false);
     }
@@ -73,8 +77,12 @@ export default function ManageGuidelinesPage() {
       if (!res.ok) throw new Error("Failed to add guideline");
       setForm({ name: "", description: "", external_url: "", medical_speciality: "" });
       await fetchGuidelines();
-    } catch (err: any) {
-      setAddError(err.message || "Unknown error");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setAddError(err.message);
+      } else {
+        setAddError("Unknown error");
+      }
     } finally {
       setAdding(false);
     }
@@ -92,8 +100,12 @@ export default function ManageGuidelinesPage() {
       console.log('DELETE response status:', res.status, 'body:', text);
       if (!res.ok) throw new Error(`Failed to delete guideline. Status: ${res.status}. Body: ${text}`);
       await fetchGuidelines();
-    } catch (err: any) {
-      alert(err.message || "Unknown error");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert(err.message);
+      } else {
+        alert("Unknown error while deleting");
+      }
     }
   }
 

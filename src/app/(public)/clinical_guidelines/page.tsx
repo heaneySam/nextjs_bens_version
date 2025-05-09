@@ -38,8 +38,12 @@ export default function SearchPage() {
         // Sort by viewcount descending (default)
         data.sort((a: Guideline, b: Guideline) => (b.viewcount ?? 0) - (a.viewcount ?? 0));
         setGuidelines(data);
-      } catch (err: any) {
-        setError(err.message || "Unknown error");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Unknown error fetching guidelines");
+        }
       } finally {
         setLoading(false);
       }
@@ -78,7 +82,13 @@ export default function SearchPage() {
       ) : error ? (
         <div style={{ color: "red" }}>Error: {error}</div>
       ) : (
-<div>Test</div>      )}
+        <GuidelinesTable
+          guidelines={filtered}
+          currentPage={currentPage}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,13 @@ import { usePathname, useParams } from 'next/navigation';
 import { Home, LayoutDashboard, BriefcaseBusiness, ShieldCheck, Users, LucideIcon, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  isSection?: boolean;
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose?: () => void;
@@ -75,11 +82,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Use fetchedRiskSlugs state for rendering
   const risksBaseHref = fetchedRiskSlugs.length > 0 ? `/risks/${fetchedRiskSlugs[0]}` : '/risks';
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/guidelines/search', label: 'Search', icon: Search },
     { href: '/guidelines/manage', label: 'Manage', icon: BriefcaseBusiness },
-    // { href: risksBaseHref, label: 'Browse', icon: BriefcaseBusiness},
+    { href: risksBaseHref, label: 'Browse', icon: LayoutDashboard, isSection: true },
   ];
 
   return (
