@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import LoginForm from '@/components/auth/LoginForm.client';
 import ToasterProvider from '@/components/providers/ToasterProvider';
 import Image from 'next/image';
@@ -9,6 +9,7 @@ import { type AuthResponse } from '@/app/auth'; // Assuming you export this type
 
 export default function ClientHomeWrapper() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true); // Optional: prevent flash of login form
 
   useEffect(() => {
@@ -23,8 +24,8 @@ export default function ClientHomeWrapper() {
         if (res.ok) {
           const data = (await res.json()) as AuthResponse;
           if (data.user) {
-            // User is authenticated client-side, redirect
-            router.replace('/dashboard');
+            const redirectPath = searchParams.get('redirectPath');
+            router.replace(redirectPath || '/dashboard');
             return; // Stop further processing
           }
         }
@@ -36,7 +37,7 @@ export default function ClientHomeWrapper() {
     }
 
     checkSession();
-  }, [router]);
+  }, [router, searchParams]);
 
   // Optional: Show loading state or null while checking
   if (isLoading) {

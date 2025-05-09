@@ -1,19 +1,32 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import ToasterProvider from '@/components/providers/ToasterProvider';
 import Header from '@/components/shared/navigation/Header.client';
-import Sidebar from '@/components/shared/navigation/Sidebar.client';
+import MainAppSidebar from '@/components/shared/navigation/MainAppSidebar.client';
 import { AuthProvider } from '@/components/auth/AuthProvider.client';
 
 interface MainLayoutClientProps {
   children: ReactNode;
-  user: { email: string };
+  user?: { email: string };
 }
 
 export default function MainLayoutClient({ children, user }: MainLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!user) {
+      router.replace(`/login?redirectPath=${encodeURIComponent(pathname)}`);
+    }
+  }, [user, router, pathname]);
+
+  if (!user) {
+    return <p className="p-8 text-center">Loading...</p>;
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -24,7 +37,7 @@ export default function MainLayoutClient({ children, user }: MainLayoutClientPro
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} />
+        <MainAppSidebar isOpen={sidebarOpen} onClose={toggleSidebar} />
 
         <main className="flex-1 overflow-auto max-w-7xl mx-auto p-6">
           <AuthProvider>

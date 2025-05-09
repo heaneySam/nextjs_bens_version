@@ -19,8 +19,8 @@ export default async function MainLayout({ children }: MainLayoutProps) {
   const { user } = await auth();
 
   return (
-    // Remove riskClasses prop
-    <MainLayoutClient user={{ email: user?.email ?? '' }}>
+    // Pass user object, converting null to undefined
+    <MainLayoutClient user={user || undefined}> 
       {children}
     </MainLayoutClient>
   );

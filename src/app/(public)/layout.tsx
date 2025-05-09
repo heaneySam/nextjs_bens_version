@@ -18,5 +18,9 @@ export default async function MainLayout({ children }: MainLayoutProps) {
   // Fetch only user
   // const { user } = await auth();
 
-  return;
+  return (
+    <MainLayoutClient>
+      {children}
+    </MainLayoutClient>
+  );
 }
